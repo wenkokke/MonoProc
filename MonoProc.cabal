@@ -1,7 +1,7 @@
-name          : MonoPo
+name          : MonoProc
 version       : 0.0.1.0
 synopsis      : Live variable analysis of the a simple procedural programming language.
-homepage      : https://github.com/pepijnkokke/MonoPo
+homepage      : https://github.com/pepijnkokke/MonoProc
 license       : MIT
 author        : Pepijn Kokke
 maintainer    : pepijn.kokke@gmail.com
