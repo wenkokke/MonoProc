@@ -1,6 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ImpredicativeTypes #-}
 module PROC.Parsing where
 
 import PROC.Base
@@ -21,26 +20,29 @@ parseBExpr = runParser "stdin" pBExpr
 pProg :: Parser Prog
 pProg = mkProg <$> pMany (pEither pDecl pStmt)
   where
-  mkProg xs = Prog (lefts xs) (rights xs)
+  mkProg xs = Prog (lefts xs) (foldr1 Seq (rights xs))
 
 pDecl :: Parser Decl
-pDecl = iI Decl pName (pParens $ pListSep pComma pName) pBlock Ii
+pDecl = iI Decl pName (pParens $ pListSep pComma pName) pBlock Ii <?> "Declaration"
 
 pStmt :: Parser Stmt
-pStmt = pSkip <|> pAssign <|> pIfThen <|> pWhile <|> pCall <|> pReturn
+pStmt = pSkip <|> pAssign <|> pIfThen <|> pWhile <|> pCall <|> pReturn <|> pCallAssign <?> "Statement"
   where
-  pSkip   = Skip <$ iI "skip" ";" Ii
-  pAssign = iI Assign pName "=" pAExpr ";" Ii
-  pIfThen = iI IfThen "if" pBExpr pBlock pElse Ii
+  pSkip       = skip <$ iI "skip" ";" Ii
+  pAssign     = iI assign pName "=" pAExpr ";" Ii
+  pIfThen     = iI ifThen "if" pBExpr pBlock pElse Ii
     where
-    pElse   :: Parser [Stmt]
-    pElse   = iI "else" pBlock Ii `opt` [Skip]
-  pWhile  = iI While "while" pBExpr pBlock Ii
-  pCall   = iI Call pName (pParens $ pListSep pComma pAExpr) ";" Ii
-  pReturn = Assign "return" <$> iI "return" pAExpr ";" Ii
+    pElse     :: Parser Stmt
+    pElse     = iI "else" pBlock Ii <|> pure skip
+  pWhile      = iI while "while" pBExpr pBlock Ii
+  pCall       = iI call pName (pParens $ pListSep pComma pAExpr) ";" Ii
+  pCallAssign = iI callAssign pName "=" pCall Ii
+    where
+    callAssign n c = Seq c (assign n (AName "return"));
+  pReturn     = assign "return" <$> iI "return" pAExpr ";" Ii
   
-pBlock :: Parser [Stmt]
-pBlock = iI '{' (pSome pStmt) '}' Ii <?> "Block"
+pBlock :: Parser Stmt
+pBlock = iI '{' (foldr1 Seq <$> pSome pStmt) '}' Ii <?> "Block"
   
 pAExpr :: Parser AExpr
 pAExpr = pOper <?> "AExpr"
@@ -71,7 +73,11 @@ pBExpr = pAtom <|> pOper <?> "BExpr"
   bOper = [("<",Lt),("<=",Lte),(">",Gt),(">=",Gte),("==",Eq),("!=",Neq)]
 
 pName :: Parser Name
-pName = lexeme $ (:) <$> pLower <*> pMany (pLetter <|> pDigit)
+pName = lexeme $ (:) <$> pLower <*> pMany (pLetter <|> pDigit <|> pUnderscore)
+
+-- |Parser for several other characters.
+pUnderscore :: Parser Char
+pUnderscore = pSym '_'
 
 -- |Flipped function application for operator parsing.
 (&) :: a -> (a -> b) -> b
