@@ -11,39 +11,38 @@ import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.Idioms
 import Text.ParserCombinators.UU.BasicInstances
 
-parseProg  = runParser "stdin" pProg
-parseDecl  = runParser "stdin" pDecl
-parseStmt  = runParser "stdin" pStmt
-parseAExpr = runParser "stdin" pAExpr
-parseBExpr = runParser "stdin" pBExpr
-
+-- |Parser for programs.
 pProg :: Parser Prog
 pProg = mkProg <$> pMany (pEither pDecl pStmt)
   where
   mkProg xs = Prog (lefts xs) (foldr1 Seq (rights xs))
 
+-- |Parser for declarations.
 pDecl :: Parser Decl
 pDecl = iI Decl pName (pParens $ pListSep pComma pName) pBlock Ii <?> "Declaration"
 
+-- |Parser for statements.
 pStmt :: Parser Stmt
-pStmt = pSkip <|> pAssign <|> pIfThen <|> pWhile <|> pCall <|> pReturn <|> pCallAssign <?> "Statement"
+pStmt = pSkip <|> pIfThen <|> pWhile <|> pCall <|> pReturn <|> pAssign <|> pCallAssign <?> "Statement"
   where
   pSkip       = skip <$ iI "skip" ";" Ii
   pAssign     = iI assign pName "=" pAExpr ";" Ii
-  pIfThen     = iI ifThen "if" pBExpr pBlock pElse Ii
+  pIfThen     = iI ifThen "if" (pParens pBExpr) pBlock pElse Ii
     where
     pElse     :: Parser Stmt
-    pElse     = iI "else" pBlock Ii <|> pure skip
+    pElse     = iI "else" pBlock Ii <<|> pure skip
   pWhile      = iI while "while" pBExpr pBlock Ii
   pCall       = iI call pName (pParens $ pListSep pComma pAExpr) ";" Ii
   pCallAssign = iI callAssign pName "=" pCall Ii
     where
     callAssign n c = Seq c (assign n (AName "return"));
   pReturn     = assign "return" <$> iI "return" pAExpr ";" Ii
-  
+
+-- |Parser for block expressions.
 pBlock :: Parser Stmt
 pBlock = iI '{' (foldr1 Seq <$> pSome pStmt) '}' Ii <?> "Block"
   
+-- |Parser for arithmetic expressions.
 pAExpr :: Parser AExpr
 pAExpr = pOper <?> "AExpr"
   where
@@ -58,6 +57,7 @@ pAExpr = pOper <?> "AExpr"
   aOper :: [[(Name,AExpr -> AExpr -> AExpr)]]
   aOper = [[("+",Add),("-",Sub)],[("*",Mul),("/",Div)]]
 
+-- |Parser for boolean expressions.
 pBExpr :: Parser BExpr
 pBExpr = pAtom <|> pOper <?> "BExpr"
   where
@@ -72,6 +72,7 @@ pBExpr = pAtom <|> pOper <?> "BExpr"
   bOper :: [(Name,AExpr -> AExpr -> BExpr)]
   bOper = [("<",Lt),("<=",Lte),(">",Gt),(">=",Gte),("==",Eq),("!=",Neq)]
 
+-- |Parser for names.
 pName :: Parser Name
 pName = lexeme $ (:) <$> pLower <*> pMany (pLetter <|> pDigit <|> pUnderscore)
 
