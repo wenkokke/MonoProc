@@ -1,7 +1,12 @@
 module PROC.Base where
 
-import Text.Printf (printf)
 import UU.Pretty
+import Text.Printf (printf)
+
+import Data.Monoid ((<>))
+import Data.Set (Set)
+import qualified Data.Set as S
+import qualified Data.Foldable as S (foldMap)
 
 data Prog
   = Prog [Decl] Stmt
@@ -82,16 +87,17 @@ instance PP Stmt where
   pp (Assign _ "return" a)  
                       = text "return" >#< pp a >|< text ";"
   pp (Assign _ n ae)  = text n >#< text "=" >#< pp ae >|< text ";"
-  pp (IfThen (BExpr _ b) t (Skip _))
-                      = text "if" >#< pp b >#<
+  pp (BExpr _ b)      = pp b
+  pp (IfThen b t (Skip _))
+                      = text "if" >#< pp_parens (pp b) >#<
                           text "{" >-< indent 2 t >-< text "}"
-  pp (IfThen (BExpr _ b) t f)
-                      = text "if" >#< pp b >#<
+  pp (IfThen b t f)
+                      = text "if" >#< pp_parens (pp b) >#<
                           text "{" >-< indent 2 t >-< text "}"
                           >#< "else" >#<
                           text "{" >-< indent 2 f >-< text "}"
-  pp (While (BExpr _ b) l)
-                      = text "while" >#< pp b >#<
+  pp (While b l)
+                      = text "while" >#< pp_parens (pp b) >#<
                           text "{" >-< indent 2 l >-< text "}"
   pp (Call _ f xs)    = text f >|< (pp_parens_list 80 $ map pp xs) >|< text ";"
   pp (Seq c@(Call _ _ _) (Assign _ n (AName "return")))
@@ -106,11 +112,11 @@ instance Show AExpr where
 instance PP AExpr where
   pp (AName n)  = text n
   pp (AConst i) = text (show i)
-  pp (Neg x)    = text "-" >#< wrap x
   pp (Add x y)  = wrap x >#< text "+" >#< wrap y
   pp (Sub x y)  = wrap x >#< text "-" >#< wrap y
   pp (Mul x y)  = wrap x >#< text "*" >#< wrap y
   pp (Div x y)  = wrap x >#< text "/" >#< wrap y
+  pp (Neg x)    = text "-" >#< wrap x
   
 instance Wrap AExpr where
   wrap a@(AName _)  = pp a
