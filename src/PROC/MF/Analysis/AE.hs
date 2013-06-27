@@ -10,13 +10,12 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
-mfAE :: Stmt -> MF AExpr
-mfAE s = MF
-  { kill = killAE
-  , gen  = genAE
-  , getI = S.empty
-  , getE = S.singleton (init s)
-  , getF = flow s
+mfAE :: Stmt -> MF (Set AExpr)
+mfAE s
+  = forwards s
+  $ distributive killAE genAE
+  $ framework
+  { getI = S.empty
   , getL = Lattice
     { join    = S.intersection
     , refines = S.isSubsetOf

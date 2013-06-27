@@ -10,13 +10,12 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
-mfLV :: Stmt -> MF Name
-mfLV s = MF
-  { kill = killLV
-  , gen  = genLV
-  , getI = S.empty
-  , getE = final s
-  , getF = flowR s
+mfLV :: Stmt -> MF (Set Name)
+mfLV s
+  = backwards s
+  $ distributive killLV genLV
+  $ framework
+  { getI = S.empty
   , getL = Lattice
     { join    = S.union
     , refines = flip S.isProperSubsetOf

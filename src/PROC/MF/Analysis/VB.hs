@@ -11,11 +11,12 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
-mfVB :: Stmt -> MF AExpr
-mfVB s = MF
-  { kill = killVB
-  , gen  = genVB
-  , getI = S.empty
+mfVB :: Stmt -> MF (Set AExpr)
+mfVB s
+  = backwards s
+  $ distributive killVB genVB
+  $ framework
+  { getI = S.empty
   , getE = final s
   , getF = flowR s
   , getL = Lattice

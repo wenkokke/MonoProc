@@ -1,6 +1,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module PROC.MF.Analysis where
 
+import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Flowable
 import Data.Monoid ((<>))
@@ -9,7 +10,7 @@ import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
 -- |Analysis at the input label.
-analyseI :: (Ord a) => MF a -> Stmt -> Label -> Set a
+analyseI :: (Ord a) => MF a -> Stmt -> Label -> a
 analyseI mf s l
   | S.member l (getE mf) = (getI mf)
   | otherwise = let
@@ -18,26 +19,68 @@ analyseI mf s l
     in S.fold (join $ getL mf) (bottom $ getL mf) outSets
 
 -- |Analysis at the output label.
-analyseO :: (Ord a) => MF a -> Stmt -> Label -> Set a
-analyseO mf s l = let
-  block   = select l (blocks s)
-  killSet = kill mf block (bottom $ getL mf)
-  genSet  = gen mf block
-  in (analyseI mf s l \\ killSet) <> genSet
+analyseO :: (Ord a) => MF a -> Stmt -> Label -> a
+analyseO mf s l = getT mf s l (analyseI mf s l)
+
+-- * Monotone Frameworks
   
+-- |Type for @kill@ functions of MF's.
+type Transfer a = Stmt -> Label -> a -> a
+
 data MF a = MF
-  { kill :: Stmt -> Set a -> Set a
-  , gen  :: Stmt -> Set a
-  , getI :: Set a
-  , getE :: Set Label
-  , getF :: Set Flow
-  , getL :: Lattice a
+  { getI :: a          -- ^ extremal values
+  , getE :: Set Label  -- ^ extremal labels
+  , getF :: Set Flow   -- ^ control flow for analysis
+  , getL :: Lattice a  -- ^ lattice on property space
+  , getT :: Transfer a -- ^ transfer function
   }
 
 data Lattice a = Lattice
-  { join    :: Set a -> Set a -> Set a
-  , refines :: Set a -> Set a -> Bool
-  , bottom  :: Set a
+  { join    :: a -> a -> a
+  , refines :: a -> a -> Bool
+  , bottom  :: a
+  }
+
+-- * MF transformers
+
+-- |Easily make MF's for backwards analyses.
+forwards :: Stmt -> MF a -> MF a
+forwards s mf = mf
+  { getE = S.singleton (init s)
+  , getF = flow s
+  }
+
+-- |Easily make MF's for forwards analyses.
+backwards :: Stmt -> MF a -> MF a
+backwards s mf = mf
+  { getE = final s
+  , getF = flowR s
+  }
+  
+-- |Type for @kill@ functions of distributive MF's.
+type Kill a = Stmt -> a -> a
+
+-- |Type for @gen@ functions of distributive MF's.
+type Gen a = Stmt -> a
+  
+-- |Easily make distributive monotone frameworks.
+distributive :: (Ord a) => Kill (Set a) -> Gen (Set a) -> MF (Set a) -> MF (Set a)
+distributive kill gen mf = mf { getT = transfer }
+  where
+  transfer s l rs = (rs \\ killed) <> genned
+    where
+    block  = select l (blocks s)
+    killed = kill block (bottom $ getL mf)
+    genned = gen block
+
+-- |Empty monotone framework.
+framework :: MF a
+framework = MF
+  { getI = undefined
+  , getE = undefined
+  , getF = undefined
+  , getL = undefined
+  , getT = undefined
   }
   
 -- * Free variable name analysis

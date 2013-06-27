@@ -11,13 +11,12 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
-mfRD :: Stmt -> MF RD
-mfRD s = MF
-  { kill = killRD
-  , gen  = genRD
-  , getI = S.map (\x -> RD x Nothing) (freeNames s)
-  , getE = S.singleton (init s)
-  , getF = flow s
+mfRD :: Stmt -> MF (Set RD)
+mfRD s
+  = forwards s
+  $ distributive killRD genRD
+  $ framework
+  { getI = S.map (\x -> RD x Nothing) (freeNames s)
   , getL = Lattice
     { join    = S.union
     , refines = flip S.isProperSubsetOf
