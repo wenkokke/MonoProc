@@ -12,9 +12,9 @@ import qualified Data.Map as M
 import Control.Applicative (pure,(<$>),(<*>))
 
 -- incorrect, we need both TOP and BOTTOM
-type Env = Map Name Integer
+type CP = Map Name Integer
 
-mfCP :: Stmt -> MF Env
+mfCP :: Stmt -> MF CP
 mfCP s
   = forwards s
   $ framework
@@ -28,12 +28,12 @@ mfCP s
   }
   
 -- incorrect, function is not total but needs to be
-transferCP :: Stmt -> Label -> Env -> Env
+transferCP :: Stmt -> Label -> CP -> CP
 transferCP (Assign _ x a) _ m = maybe m (\i -> M.insert x i m) (evalAE m a)
 transferCP (Skip _)       _ m = m
 transferCP (BExpr _ _)    _ m = m
 
-evalAE :: Env -> AExpr -> Maybe Integer
+evalAE :: CP -> AExpr -> Maybe Integer
 evalAE env a = case a of
   AName n   -> M.lookup n env
   AConst i  -> pure i

@@ -16,8 +16,8 @@ parseStmt  = runLabel . runParser "stdin" pStmt
 parseAExpr = runParser "stdin" pAExpr
 parseBExpr = runParser "stdin" pBExpr
 
-mkStmt :: [String] -> Stmt
-mkStmt = (\(Prog _ s) -> s) . parseProg . unlines
+mkStmt :: [String] -> Prog
+mkStmt = parseProg . unlines
 
 ex1 = mkStmt
   [ "x = 10;"

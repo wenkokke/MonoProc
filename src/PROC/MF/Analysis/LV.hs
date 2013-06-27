@@ -10,10 +10,11 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
-mfLV :: Stmt -> MF (Set Name)
-mfLV s
+mfLV :: Prog -> MF (Set Name)
+mfLV (Prog d s)
   = backwards s
   $ distributive killLV genLV
+  $ embelished (toEnv d)
   $ framework
   { getI = S.empty
   , getL = Lattice

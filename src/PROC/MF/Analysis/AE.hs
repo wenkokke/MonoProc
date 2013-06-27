@@ -10,10 +10,11 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
-mfAE :: Stmt -> MF (Set AExpr)
-mfAE s
+mfAE :: Prog -> MF (Set AExpr)
+mfAE (Prog d s)
   = forwards s
   $ distributive killAE genAE
+  $ embelished (toEnv d)
   $ framework
   { getI = S.empty
   , getL = Lattice

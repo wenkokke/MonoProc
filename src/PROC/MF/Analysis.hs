@@ -9,17 +9,23 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
+-- |Runs an analysis on a program at a certain label.
+analyse :: (Prog -> MF a) -> Prog -> Label -> a
+analyse mkMF p@(Prog d s) l
+  | S.member l (labels p) = let mf = mkMF p in runMF mf mf s l
+  | otherwise             = error ("no statement with label " ++ show l)
+
 -- |Analysis at the input label.
-analyseI :: (Ord a) => MF a -> Stmt -> Label -> a
+analyseI :: MF a -> Stmt -> Label -> a
 analyseI mf s l
   | S.member l (getE mf) = (getI mf)
   | otherwise = let
     fromSet   = S.map from (S.filter ((l==) . to) (getF mf))
-    outSets   = S.map (analyseO mf s) fromSet
-    in S.fold (join $ getL mf) (bottom $ getL mf) outSets
+    outSets   = map (analyseO mf s) (S.toList fromSet)
+    in foldr (join $ getL mf) (bottom $ getL mf) outSets
 
 -- |Analysis at the output label.
-analyseO :: (Ord a) => MF a -> Stmt -> Label -> a
+analyseO :: MF a -> Stmt -> Label -> a
 analyseO mf s l = getT mf s l (analyseI mf s l)
 
 -- * Monotone Frameworks
@@ -28,11 +34,13 @@ analyseO mf s l = getT mf s l (analyseI mf s l)
 type Transfer a = Stmt -> Label -> a -> a
 
 data MF a = MF
-  { getI :: a          -- ^ extremal values
-  , getE :: Set Label  -- ^ extremal labels
-  , getF :: Set Flow   -- ^ control flow for analysis
-  , getL :: Lattice a  -- ^ lattice on property space
-  , getT :: Transfer a -- ^ transfer function
+  { getI  :: a                          -- ^ extremal values
+  , getE  :: Set Label                  -- ^ extremal labels
+  , getF  :: Set Flow                   -- ^ control flow for analysis
+  , getL  :: Lattice a                  -- ^ lattice on property space
+  , getT  :: Transfer a                 -- ^ transfer function
+  , getD  :: Env                        -- ^ procedure declarations
+  , runMF :: MF a -> Stmt -> Label -> a -- ^ run the analysis
   }
 
 data Lattice a = Lattice
@@ -46,15 +54,17 @@ data Lattice a = Lattice
 -- |Easily make MF's for backwards analyses.
 forwards :: Stmt -> MF a -> MF a
 forwards s mf = mf
-  { getE = S.singleton (init s)
-  , getF = flow s
+  { getE  = S.singleton (init s)
+  , getF  = flow (getD mf) s
+  , runMF = analyseO
   }
 
 -- |Easily make MF's for forwards analyses.
 backwards :: Stmt -> MF a -> MF a
 backwards s mf = mf
-  { getE = final s
-  , getF = flowR s
+  { getE  = final s
+  , getF  = flowR (getD mf) s
+  , runMF = analyseI
   }
   
 -- |Type for @kill@ functions of distributive MF's.
@@ -73,14 +83,20 @@ distributive kill gen mf = mf { getT = transfer }
     killed = kill block (bottom $ getL mf)
     genned = gen block
 
+-- |Easily make embellished monotone frameworks.
+embelished :: Env -> MF a -> MF a
+embelished env mf = mf { getD = env }
+    
 -- |Empty monotone framework.
 framework :: MF a
 framework = MF
-  { getI = undefined
-  , getE = undefined
-  , getF = undefined
-  , getL = undefined
-  , getT = undefined
+  { getI  = undefined
+  , getE  = undefined
+  , getF  = undefined
+  , getL  = undefined
+  , getT  = undefined
+  , getD  = undefined
+  , runMF = undefined
   }
   
 -- * Free variable name analysis
@@ -95,7 +111,7 @@ instance FreeNames Stmt where
   freeNames (Skip _)         = S.empty
   freeNames (IfThen _ s1 s2) = freeNames s1 <> freeNames s2
   freeNames (While _ s1)     = freeNames s1
-  freeNames (Call _ _ _)     = S.empty
+  freeNames (Call _ _ _ _)   = S.empty
   freeNames (Seq s1 s2)      = freeNames s1 <> freeNames s2
   
 instance FreeNames BExpr where

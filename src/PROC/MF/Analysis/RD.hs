@@ -11,10 +11,11 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
-mfRD :: Stmt -> MF (Set RD)
-mfRD s
+mfRD :: Prog -> MF (Set RD)
+mfRD (Prog d s)
   = forwards s
   $ distributive killRD genRD
+  $ embelished (toEnv d)
   $ framework
   { getI = S.map (\x -> RD x Nothing) (freeNames s)
   , getL = Lattice

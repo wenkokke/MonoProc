@@ -11,14 +11,13 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
-mfVB :: Stmt -> MF (Set AExpr)
-mfVB s
+mfVB :: Prog -> MF (Set AExpr)
+mfVB (Prog d s)
   = backwards s
   $ distributive killVB genVB
+  $ embelished (toEnv d)
   $ framework
   { getI = S.empty
-  , getE = final s
-  , getF = flowR s
   , getL = Lattice
     { join    = S.intersection
     , refines = S.isSubsetOf

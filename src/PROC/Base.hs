@@ -7,6 +7,8 @@ import Data.Monoid ((<>))
 import Data.Set (Set)
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
+import Data.Map (Map)
+import qualified Data.Map as M
 
 data Prog
   = Prog [Decl] Stmt
@@ -16,13 +18,20 @@ data Decl
   = Decl Name [Name] Stmt
   deriving (Eq,Ord)
   
+type Env = Map Name Decl
+
+toEnv :: [Decl] -> Env
+toEnv d = M.fromList (map withName d)
+  where
+  withName d@(Decl n _ _) = (n, d)
+  
 data Stmt
   = Skip    Label
   | BExpr   Label BExpr
   | Assign  Label Name AExpr
   | IfThen  Stmt Stmt Stmt
   | While   Stmt Stmt
-  | Call    Label Name [AExpr]
+  | Call    Label Label Name [AExpr]
   | Seq     Stmt Stmt
   deriving (Eq,Ord)
   
@@ -56,7 +65,7 @@ skip     = Skip 0
 assign   = Assign 0
 ifThen b = IfThen (BExpr 0 b)
 while  b = While (BExpr 0 b)
-call     = Call 0
+call     = Call 0 0
 
 -- * Printing programs
 
@@ -99,8 +108,8 @@ instance PP Stmt where
   pp (While b l)
                       = text "while" >#< pp_parens (pp b) >#<
                           text "{" >-< indent 2 l >-< text "}"
-  pp (Call _ f xs)    = text f >|< (pp_parens_list 80 $ map pp xs) >|< text ";"
-  pp (Seq c@(Call _ _ _) (Assign _ n (AName "return")))
+  pp (Call _ _ f xs)  = text f >|< (pp_parens_list 80 $ map pp xs) >|< text ";"
+  pp (Seq c@(Call _ _ _ _) (Assign _ n (AName "return")))
                       = text n >#< text "=" >#< pp c
   pp (Seq a b)        = pp a >-< pp b
   
