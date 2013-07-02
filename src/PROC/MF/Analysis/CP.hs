@@ -11,8 +11,11 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Control.Applicative (pure,(<$>),(<*>))
 
+data CP = NaC       -- ^ not-a-constant
+        | C Integer -- ^ constant
+
 -- incorrect, we need both TOP and BOTTOM
-type CP = Map Name Integer
+type CP = Map Name CP
 
 mfCP :: Stmt -> MF CP
 mfCP s
