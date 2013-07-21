@@ -1,3 +1,8 @@
 /cabal-dev
 
 /dist
+
+/src/cabal-dev/*.config
+/src/cabal-dev/packages-7.4.2.conf/*.cache
+
+/src/cabal-dev/packages/*.tar

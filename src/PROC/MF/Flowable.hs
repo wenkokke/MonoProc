@@ -27,13 +27,17 @@ swap (Inter a b) = Inter b a
 
 -- |Uses the declarations in a @Prog@ constructor to create
 --  en environment, and passes that to @flow@.
-flow' :: Prog -> Set Flow
-flow' p@(Prog d _) = flow (toEnv d) p
+progFlow :: Prog -> Set Flow
+progFlow p@(Prog d _) = flow (toEnv d) p
 
 -- |Uses the declarations in a @Prog@ constructor to create
 --  en environment, and passes that to @flowR@.
-flowR' :: Prog -> Set Flow
-flowR' p@(Prog d _) = flowR (toEnv d) p
+progFlowR :: Prog -> Set Flow
+progFlowR p@(Prog d _) = flowR (toEnv d) p
+
+-- |Determines whether a flow ends in a specific label.
+flowsTo :: Flow -> Label -> Bool
+flowsTo f l = l == to f
 
 -- |Act as @fst@ and @snd@ on @Flow@ tuples, respectively.
 from,to :: Flow -> Label
@@ -54,7 +58,7 @@ select l = isolated . S.elems . S.filter hasLabel
   hasLabel (Assign l' _ _) = l == l'
   hasLabel (BExpr l' _)    = l == l'
   hasLabel (Skip l')       = l == l'
-  hasLabel (While b _)     = hasLabel b
+--hasLabel (While b _)     = hasLabel b
   
 class Flowable a where
   init   :: a -> Label
@@ -104,7 +108,8 @@ instance Flowable Stmt where
   final (Assign l _ _)    = S.singleton l
   final (Seq s1 s2)       = final s2
   final (IfThen _ s1 s2)  = final s1 <> final s2
-  final (While b _)       = S.singleton (init b)
+  final (While b _)       = S.singleton (final b)
+  final (BExpr l _)       = S.singleton l
   final (Call _ r _ _)    = S.singleton r
   
   blocks s@(Skip _)         = S.singleton s
@@ -112,14 +117,27 @@ instance Flowable Stmt where
   blocks s@(BExpr _ _)      = S.singleton s
   blocks s@(Seq s1 s2)      = blocks s1 <> blocks s2
   blocks s@(IfThen b s1 s2) = blocks b <> blocks s1 <> blocks s2
-  blocks s@(While b s1)     = blocks b <> S.singleton s <> blocks s1
+  blocks s@(While b s1)     = blocks b <> blocks s1 -- removed: S.singleton s <> 
   blocks s@(Call _ _ _ _)   = S.singleton s
   
   flow e (Skip _)         = S.empty
   flow e (Assign _ _ _)   = S.empty
-  flow e (Seq s1 s2)      = flow e s1 <> flow e s2 <> (S.map (\l -> Intra l (init s2)) (final s1))
-  flow e (IfThen b s1 s2) = flow e s1 <> flow e s2 <> (S.map (\s -> Intra (init b) (init s)) (S.fromList [s1,s2]))
-  flow e (While b s1)     = flow e s1 <> (S.map (\l -> Intra l (init b)) (S.insert (init s1) (final s1)))
+  
+  flow e (Seq s1 s2)      = flow e s1 <> flow e s2 <> finals_to_init
+    where finals_to_init  = S.map (\l -> Intra l (init s2)) (final s1)
+    
+  flow e (IfThen b s1 s2) = flow e s1 <> flow e s2 <> bool_to_inits
+    where bool_to_inits   = S.map (\s -> Intra (init b) (init s)) (S.fromList [s1,s2])
+    
+  flow e (While b s1)     = flow e s1 <> bool_to_init <> finals_to_bool
+    where bool_to_init    = S.singleton (Intra (init b) (init s1))
+          finals_to_bool  = S.map (\l -> Intra l (init b)) (final s1)
+          
   flow e (Call c r n _)   = case M.lookup n e of
-                              Just d  -> S.insert (Inter c (init d)) (S.map (\l -> Inter l r) (final d))
-                              Nothing -> error ("no function called " ++ show n)
+                              Just d  -> let 
+                              
+                                call_to_init    = S.singleton Inter c (init d)
+                                finals_to_call  = S.map (\l -> Inter l r) (final d)
+                                
+                                in call_to_init <> finals_to_call
+                              Nothing -> error ("undefined function \"" ++ show n ++ "\"")

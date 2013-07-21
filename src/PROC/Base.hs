@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 module PROC.Base where
 
 import UU.Pretty
@@ -91,13 +92,16 @@ instance PP Decl where
 instance Show Stmt where
   show = show . pp
   
+instance PP Label where
+  pp = text . show
+  
 instance PP Stmt where
-  pp (Skip _)         = text "skip" >|< text ";"
-  pp (Assign _ "return" a)  
-                      = text "return" >#< pp a >|< text ";"
-  pp (Assign _ n ae)  = text n >#< text "=" >#< pp ae >|< text ";"
-  pp (BExpr _ b)      = pp b
-  pp (IfThen b t (Skip _))
+  pp (Skip l)         = text "skip" >#< pp_brackets (pp l) >|< text ";"
+  pp (Assign l "return" a)  
+                      = text "return" >#< pp a >#< pp_brackets (pp l) >|< text ";"
+  pp (Assign l n ae)  = text n >#< text "=" >#< pp ae >#< pp_brackets (pp l) >|< text ";"
+  pp (BExpr l b)      = pp b >#< pp_brackets (pp l)
+  pp (IfThen b t (Skip l))
                       = text "if" >#< pp_parens (pp b) >#<
                           text "{" >-< indent 2 t >-< text "}"
   pp (IfThen b t f)

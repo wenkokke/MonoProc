@@ -2,6 +2,12 @@ module PROC
   ( module PROC.Base
   , module PROC.Parsing
   , module PROC.MF
+  , ex1
+  , ex2
+  , ex3
+  , ex4
+  , ex5
+  , mkProg
   ) where
 
 import Prelude hiding (init)
@@ -13,17 +19,15 @@ import Text.ParserCombinators.UU.Utils (runParser)
 parseProg  = runLabel . runParser "stdin" pProg
 parseDecl  = runLabel . runParser "stdin" pDecl
 parseStmt  = runLabel . runParser "stdin" pStmt
-parseAExpr = runParser "stdin" pAExpr
-parseBExpr = runParser "stdin" pBExpr
 
-mkStmt :: [String] -> Prog
-mkStmt = parseProg . unlines
+mkProg :: [String] -> Prog
+mkProg = parseProg . unlines
 
-ex1 = mkStmt
+ex1 = mkProg
   [ "x = 10;"
   , "if (x < 10) { y = 10; } else { y = 11; }"
   ]
-ex2 = mkStmt
+ex2 = mkProg
   [ "const(x,y) {"
   ,   "return x;"
   , "}"
@@ -31,20 +35,20 @@ ex2 = mkStmt
   , "y = 11;"
   , "z = const(x,y);"
   ]
-ex3 = mkStmt
+ex3 = mkProg
   [ "a = 2;"
   , "b = 3 * a;"
   , "c = 5 * b;"
   , "b = b * c;"
   ]
-ex4 = mkStmt
+ex4 = mkProg
   [ "x = 10;"
   , "while (x > 0) {"
-  , "x = x - 1;"
-  , "y = 10 * 10;"
+  , "  x = x - 1;"
+  , "  y = 10 * 10;"
   , "}"
   ]
-ex5 = mkStmt
+ex5 = mkProg
   [ "a = 10;"
   , "b = a + 10;"
   , "c = b + 10;"

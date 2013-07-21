@@ -1,4 +1,4 @@
-module PROC.MF.Analysis.AE (mfAE) where
+module PROC.MF.Analysis.AE (mfAE,genAE,killAE) where
 
 import Prelude hiding (init)
 import PROC.Base
@@ -32,4 +32,4 @@ killAE (BExpr _ _)     _  = S.empty
 genAE :: Stmt -> Set AExpr
 genAE (Assign _ x a) = S.filter (not . isFreeIn x) (available a)
 genAE (Skip _)       = S.empty
-genAE (BExpr _ _)    = S.empty
+genAE (BExpr _ b)    = S.empty

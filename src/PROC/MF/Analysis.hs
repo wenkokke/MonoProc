@@ -18,11 +18,13 @@ analyse mkMF p@(Prog d s) l
 -- |Analysis at the input label.
 analyseI :: MF a -> Stmt -> Label -> a
 analyseI mf s l
+  -- if l is an extremal label, return iota
   | S.member l (getE mf) = (getI mf)
+  -- otherwise,
   | otherwise = let
-    fromSet   = S.map from (S.filter ((l==) . to) (getF mf))
-    outSets   = map (analyseO mf s) (S.toList fromSet)
-    in foldr (join $ getL mf) (bottom $ getL mf) outSets
+    flowsToL  = S.map from (S.filter (`flowsTo` l) (getF mf)) -- get all labels that flow to l
+    analysed  = map (analyseO mf s) (S.toList flowsToL)       -- analyse at those labels
+    in joinall (getL mf) analysed                             -- and join the results
 
 -- |Analysis at the output label.
 analyseO :: MF a -> Stmt -> Label -> a
@@ -30,7 +32,7 @@ analyseO mf s l = getT mf s l (analyseI mf s l)
 
 -- * Monotone Frameworks
   
--- |Type for @kill@ functions of MF's.
+-- |Type for transfer functions of MF's.
 type Transfer a = Stmt -> Label -> a -> a
 
 data MF a = MF
@@ -42,12 +44,17 @@ data MF a = MF
   , getD  :: Env                        -- ^ procedure declarations
   , runMF :: MF a -> Stmt -> Label -> a -- ^ run the analysis
   }
+  
+-- * Lattices
 
 data Lattice a = Lattice
   { join    :: a -> a -> a
   , refines :: a -> a -> Bool
   , bottom  :: a
   }
+  
+joinall :: Lattice a -> [a] -> a
+joinall l = foldr (join l) (bottom l)
 
 -- * MF transformers
 
@@ -148,11 +155,11 @@ instance Available Stmt where
 
 instance Available BExpr where
   available (BConst _)  = S.empty
-  available (Lt a1 a2)  = available a1 <> available a2
+  available (Lt  a1 a2) = available a1 <> available a2
   available (Lte a1 a2) = available a1 <> available a2
-  available (Gt a1 a2)  = available a1 <> available a2
+  available (Gt  a1 a2) = available a1 <> available a2
   available (Gte a1 a2) = available a1 <> available a2
-  available (Eq a1 a2)  = available a1 <> available a2
+  available (Eq  a1 a2) = available a1 <> available a2
   available (Neq a1 a2) = available a1 <> available a2
   available (Not a1)    = available a1
     

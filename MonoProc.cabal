@@ -7,7 +7,7 @@ author        : Pepijn Kokke
 maintainer    : pepijn.kokke@gmail.com
 copyright     : (c) 2013 Pepijn Kokke, Wout Elsinghorst
 category      : Language
-build-type    : Simple
+build-type    : Custom
 cabal-version : >= 1.8
 
 library
@@ -15,3 +15,24 @@ library
   build-depends   : base == 4.5.*, uu-parsinglib == 2.8.*, uulib == 0.9.*,
                     monad-supply == 0.3.*, mtl == 2.1.*, containers == 0.4.2.*
   hs-source-dirs  : src
+  
+test-suite test-lv
+  type            : exitcode-stdio-1.0
+  main-is         : TestLV.hs
+  build-depends   : base == 4.5.*, uu-parsinglib == 2.8.*, uulib == 0.9.*,
+                    monad-supply == 0.3.*, mtl == 2.1.*, containers == 0.4.2.*
+  hs-source-dirs  : src test
+  
+test-suite test-ae
+  type            : exitcode-stdio-1.0
+  main-is         : TestAE.hs
+  build-depends   : base == 4.5.*, uu-parsinglib == 2.8.*, uulib == 0.9.*,
+                    monad-supply == 0.3.*, mtl == 2.1.*, containers == 0.4.2.*
+  hs-source-dirs  : src test
+  
+test-suite test-rd
+  type            : exitcode-stdio-1.0
+  main-is         : TestRD.hs
+  build-depends   : base == 4.5.*, uu-parsinglib == 2.8.*, uulib == 0.9.*,
+                    monad-supply == 0.3.*, mtl == 2.1.*, containers == 0.4.2.*
+  hs-source-dirs  : src test

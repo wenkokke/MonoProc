@@ -11,6 +11,9 @@ import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.Idioms
 import Text.ParserCombinators.UU.BasicInstances
 
+parseAExpr = runParser "stdin" pAExpr
+parseBExpr = runParser "stdin" pBExpr
+
 -- |Parser for programs.
 pProg :: Parser Prog
 pProg = mkProg <$> pMany (pEither pDecl pStmt)
