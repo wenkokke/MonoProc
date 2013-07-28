@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import PROC
@@ -5,9 +7,9 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Foldable (forM_)
 import Text.Printf (printf)
-import Text.ParserCombinators.UU
-import Text.ParserCombinators.UU.Idioms
-import Text.ParserCombinators.UU.Utils (runParser)
+import Text.ParserCombinators.UU ((<$>),pListSep)
+import Text.ParserCombinators.UU.BasicInstances (Parser)
+import Text.ParserCombinators.UU.Utils (runParser,pBraces,pComma)
 
 main :: IO ()
 main = forM_ resl $ \(l,exp) -> do

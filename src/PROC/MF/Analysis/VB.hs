@@ -26,9 +26,9 @@ mfVB (Prog d s)
   }
 
 killVB :: Stmt -> Set AExpr -> Set AExpr
-killVB (Assign _ x _) bot = S.filter (isFreeIn x) bot
+killVB (Assign _ x _) bot = S.filter (x `isFreeIn`) bot
 killVB (Skip _)        _  = S.empty
-killVB (BExpr _ b)     _  = S.empty
+killVB (BExpr _ _)     _  = S.empty
 
 genVB :: Stmt -> Set AExpr
 genVB (Assign _ _ a) = available a
