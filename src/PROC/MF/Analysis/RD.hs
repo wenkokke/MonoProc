@@ -35,6 +35,8 @@ genRD (Assign l x _)  = S.singleton (RD x (Just l))
 genRD (Skip _)        = S.empty
 genRD (BExpr _ _)     = S.empty
 
+-- * Reached-Definitions Type
+
 data RD = RD Name (Maybe Label)
 
 instance Show RD where

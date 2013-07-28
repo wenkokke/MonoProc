@@ -35,6 +35,10 @@ progFlow p@(Prog d _) = flow (toEnv d) p
 progFlowR :: Prog -> Set Flow
 progFlowR p@(Prog d _) = flowR (toEnv d) p
 
+-- |Determines whether a flow begins in a specific label.
+flowsFrom :: Flow -> Label -> Bool
+flowsFrom f l = l == from f
+
 -- |Determines whether a flow ends in a specific label.
 flowsTo :: Flow -> Label -> Bool
 flowsTo f l = l == to f
@@ -108,7 +112,7 @@ instance Flowable Stmt where
   final (Assign l _ _)    = S.singleton l
   final (Seq s1 s2)       = final s2
   final (IfThen _ s1 s2)  = final s1 <> final s2
-  final (While b _)       = S.singleton (final b)
+  final (While b _)       = final b
   final (BExpr l _)       = S.singleton l
   final (Call _ r _ _)    = S.singleton r
   
@@ -136,7 +140,7 @@ instance Flowable Stmt where
   flow e (Call c r n _)   = case M.lookup n e of
                               Just d  -> let 
                               
-                                call_to_init    = S.singleton Inter c (init d)
+                                call_to_init    = S.singleton $ Inter c (init d)
                                 finals_to_call  = S.map (\l -> Inter l r) (final d)
                                 
                                 in call_to_init <> finals_to_call

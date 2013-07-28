@@ -27,6 +27,7 @@ botCP = Nothing
 
 -- |Refining predicate of the CP type.
 refinesCP :: CP -> CP -> Bool
+refinesCP  Nothing   Nothing  = False
 refinesCP  Nothing   _        = True
 refinesCP  _         Nothing  = False
 refinesCP (Just s1) (Just s2) = all (\z -> M.lookup z s1 `refinesZT` M.lookup z s2) keys
@@ -35,6 +36,7 @@ refinesCP (Just s1) (Just s2) = all (\z -> M.lookup z s1 `refinesZT` M.lookup z 
 
 -- |Refining predicate of the Z+T type.
 refinesZT :: ZT -> ZT -> Bool
+refinesZT  Nothing   Nothing  = False
 refinesZT  _         Nothing  = True
 refinesZT  Nothing   _        = False
 refinesZT (Just z1) (Just z2) = z1 == z2
@@ -71,10 +73,11 @@ mfCP (Prog d s)
   }
 
 transferCP :: Transfer CP
-transferCP (Assign _ x a) _ m = do m <- m; i <- evalAE m a; return $ M.insert x i m
-transferCP (Skip _)       _ m = m
-transferCP (BExpr _ _)    _ m = m
-transferCP  other         _ m = error (show other)
+transferCP s l m = case select l (blocks s) of
+  (Assign _ x a) -> do m <- m; i <- evalAE m a; return $ M.insert x i m
+  (Skip _)       -> m
+  (BExpr _ _)    -> m
+  (other)        -> error (show other)
 
 evalAE :: Map Name Integer -> AExpr -> ZT
 evalAE env a = case a of

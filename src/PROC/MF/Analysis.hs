@@ -9,26 +9,67 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
--- |Runs an analysis on a program at a certain label.
+analyseAndShow :: (Show a) => (Prog -> MF a) -> Prog -> String
+analyseAndShow mf p = showMFP (S.toList $ labels p) (analyse mf p)
+
+-- |Runs an MFP analysis on a program at a certain label.
 analyse :: (Prog -> MF a) -> Prog -> Label -> a
 analyse mkMF p@(Prog d s) l
-  | S.member l (labels p) = let mf = mkMF p in runMF mf mf s l
+  | S.member l (labels p) = let
+       mf  = mkMF p
+       mfp = runMFP mf mf s
+    in mfp l
   | otherwise             = error ("no statement with label " ++ show l)
 
--- |Analysis at the input label.
-analyseI :: MF a -> Stmt -> Label -> a
-analyseI mf s l
-  -- if l is an extremal label, return iota
-  | S.member l (getE mf) = (getI mf)
-  -- otherwise,
-  | otherwise = let
-    flowsToL  = S.map from (S.filter (`flowsTo` l) (getF mf)) -- get all labels that flow to l
-    analysed  = map (analyseO mf s) (S.toList flowsToL)       -- analyse at those labels
-    in joinall (getL mf) analysed                             -- and join the results
+analyseI :: MF a -> Stmt -> MFP a
+analyseI mf s = fixMFP mf s (ws0 mf) (mfp0 mf s)
 
--- |Analysis at the output label.
-analyseO :: MF a -> Stmt -> Label -> a
-analyseO mf s l = getT mf s l (analyseI mf s l)
+analyseO :: MF a -> Stmt -> MFP a
+analyseO mf s l = let tr = getT mf s l in tr (analyseI mf s l)
+
+-- * Maximal Fixed Point Analysis
+
+type MFP a = Label -> a
+
+-- |Compute the maximal fixed point for an MF.
+fixMFP :: MF a -> Stmt -> [Flow] -> MFP a -> MFP a
+fixMFP mf s [    ] mfp = mfp
+fixMFP mf s (w:ws) mfp = let
+
+    (l, l') = (from w, to w)        -- import flow as (l,l')
+    tr      = getT mf s l           -- import transfer function t
+    
+    x <: y = refines (getL mf) x y  -- import @refines@ operator
+    x \/ y = join (getL mf) x y     -- import @join@ operator
+    
+    mfpL    = tr (mfp l)            -- get new analysis for l
+    mfpL'   = mfp l'                -- get old analysis for l'
+
+  in if not (mfpL <: mfpL')         -- if we have a fixpoint,
+      then fixMFP mf s ws mfp       -- stop and return the current analysis
+      else let                      -- otherwise,
+      
+        -- add all flows from l' to the worklist
+        ws'    = filter (`flowsFrom` l') (ws0 mf) ++ ws
+        -- add the join of both computations to the result
+        mfp' k = if k == l' then mfpL \/ mfpL' else mfp k
+        
+      in fixMFP mf s ws' mfp'       -- recusively perform the analysis
+      
+-- |Show instances of MFP--which are functions--for a limited
+--  number of inputs.
+showMFP :: (Show a) => [Label] -> MFP a -> String
+showMFP ls mfp = unlines $ map (show . mfp) ls
+
+-- |Initial worklist of the mfp algorithm.
+ws0 :: MF a -> [Flow]
+ws0 mf = S.toList (getF mf)
+      
+-- |Initial output of the MFP algorithm.
+mfp0 :: MF a -> Stmt -> MFP a
+mfp0 mf s l
+  | l `S.member` getE mf = getI mf
+  | otherwise            = bottom (getL mf)
 
 -- * Monotone Frameworks
   
@@ -36,13 +77,13 @@ analyseO mf s l = getT mf s l (analyseI mf s l)
 type Transfer a = Stmt -> Label -> a -> a
 
 data MF a = MF
-  { getI  :: a                          -- ^ extremal values
-  , getE  :: Set Label                  -- ^ extremal labels
-  , getF  :: Set Flow                   -- ^ control flow for analysis
-  , getL  :: Lattice a                  -- ^ lattice on property space
-  , getT  :: Transfer a                 -- ^ transfer function
-  , getD  :: Env                        -- ^ procedure declarations
-  , runMF :: MF a -> Stmt -> Label -> a -- ^ run the analysis
+  { getI   :: a                     -- ^ extremal values
+  , getE   :: Set Label             -- ^ extremal labels
+  , getF   :: Set Flow              -- ^ control flow for analysis
+  , getL   :: Lattice a             -- ^ lattice on property space
+  , getT   :: Transfer a            -- ^ transfer function
+  , getD   :: Env                   -- ^ procedure declarations
+  , runMFP :: MF a -> Stmt -> MFP a -- ^ run the analysis
   }
   
 -- * Lattices
@@ -61,17 +102,17 @@ joinall l = foldr (join l) (bottom l)
 -- |Easily make MF's for backwards analyses.
 forwards :: Stmt -> MF a -> MF a
 forwards s mf = mf
-  { getE  = S.singleton (init s)
-  , getF  = flow (getD mf) s
-  , runMF = analyseO
+  { getE   = S.singleton (init s)
+  , getF   = flow (getD mf) s
+  , runMFP = analyseO
   }
 
 -- |Easily make MF's for forwards analyses.
 backwards :: Stmt -> MF a -> MF a
 backwards s mf = mf
-  { getE  = final s
-  , getF  = flowR (getD mf) s
-  , runMF = analyseI
+  { getE   = final s
+  , getF   = flowR (getD mf) s
+  , runMFP = analyseI
   }
   
 -- |Type for @kill@ functions of distributive MF's.
@@ -96,17 +137,17 @@ embelished env mf = mf { getD = env }
     
 -- |Empty monotone framework.
 framework :: MF a
-framework = MF
-  { getI  = undefined
-  , getE  = undefined
-  , getF  = undefined
-  , getL  = undefined
-  , getT  = undefined
-  , getD  = undefined
-  , runMF = undefined
+framework  = MF
+  { getI   = error "uninitialized property I"
+  , getE   = error "uninitialized property E"
+  , getF   = error "uninitialized property F"
+  , getL   = error "uninitialized property L"
+  , getT   = error "uninitialized property T"
+  , getD   = error "uninitialized property D"
+  , runMFP = error "uninitialized function `run'"
   }
   
--- * Free variable name analysis
+-- * Free Variable Names
 
 class FreeNames a where
   freeNames :: a -> Set Name
@@ -140,8 +181,7 @@ instance FreeNames AExpr where
   freeNames (Div e1 e2) = freeNames e1 <> freeNames e2
   freeNames (Neg e1)    = freeNames e1
 
--- * Available expression analysis
---   Not to be confused with the AE monotone analysis
+-- * Available Expressions
 
 class Available a where
   available :: a -> Set AExpr
