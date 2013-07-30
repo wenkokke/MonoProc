@@ -1,4 +1,4 @@
-module PROC.MF.Analysis.AE (mfAE,genAE,killAE) where
+module PROC.MF.Analysis.AE (mfAE) where
 
 import Prelude hiding (init)
 import PROC.Base
@@ -14,7 +14,7 @@ mfAE :: Prog -> MF (Set AExpr)
 mfAE (Prog d s)
   = forwards s
   $ distributive killAE genAE
-  $ embelished (toEnv d)
+  $ embelished (mkFTable d)
   $ framework
   { getI = S.empty
   , getL = Lattice

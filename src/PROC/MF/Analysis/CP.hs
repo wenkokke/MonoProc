@@ -1,9 +1,11 @@
-module PROC.MF.Analysis.CP where
+module PROC.MF.Analysis.CP (mfCP) where
 
 import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Analysis
 import PROC.MF.Flowable
+import PROC.Evaluating (VTable)
+import qualified PROC.Evaluating as E (VTable,evalAE)
 
 import Text.Printf (printf)
 import Data.Monoid ((<>))
@@ -61,7 +63,7 @@ joinZT (Just z1) (Just z2) | z1 == z2  = Just z1
 mfCP :: Prog -> MF CP
 mfCP (Prog d s)
   = forwards s
-  $ embelished (toEnv d)
+  $ embelished (mkFTable d)
   $ framework
   { getI = topCP
   , getL = Lattice
@@ -79,12 +81,8 @@ transferCP s l m = case select l (blocks s) of
   (BExpr _ _)    -> m
   (other)        -> error (show other)
 
-evalAE :: Map Name Integer -> AExpr -> ZT
-evalAE env a = case a of
-  AName n   -> M.lookup n env
-  AConst i  -> pure i
-  Add e1 e2 -> (+) <$> evalAE env e1 <*> evalAE env e2
-  Sub e1 e2 -> (-) <$> evalAE env e1 <*> evalAE env e2
-  Mul e1 e2 -> (*) <$> evalAE env e1 <*> evalAE env e2
-  Div e1 e2 -> div <$> evalAE env e1 <*> evalAE env e2
-  Neg e1    -> negate <$> evalAE env e1
+evalAE :: VTable -> AExpr -> ZT
+evalAE env a = case E.evalAE env a of
+  Left  _ -> Nothing
+  Right i -> Just i
+  

@@ -28,12 +28,12 @@ swap (Inter a b) = Inter b a
 -- |Uses the declarations in a @Prog@ constructor to create
 --  en environment, and passes that to @flow@.
 progFlow :: Prog -> Set Flow
-progFlow p@(Prog d _) = flow (toEnv d) p
+progFlow p@(Prog d _) = flow (mkFTable d) p
 
 -- |Uses the declarations in a @Prog@ constructor to create
 --  en environment, and passes that to @flowR@.
 progFlowR :: Prog -> Set Flow
-progFlowR p@(Prog d _) = flowR (toEnv d) p
+progFlowR p@(Prog d _) = flowR (mkFTable d) p
 
 -- |Determines whether a flow begins in a specific label.
 flowsFrom :: Flow -> Label -> Bool
@@ -70,17 +70,17 @@ class Flowable a where
   blocks :: a -> Set Stmt
   labels :: a -> Set Label
   labels  = S.map init . blocks
-  flow   :: Env -> a -> Set Flow
-  flowR  :: Env -> a -> Set Flow
+  flow   :: FTable -> a -> Set Flow
+  flowR  :: FTable -> a -> Set Flow
   flowR e = S.map swap . flow e
-  entry  :: Env -> a -> Label
+  entry  :: FTable -> a -> Label
   entry e = isolated . S.elems . S.map to . entry'
     where
     entry'    a  = (S.map (\l -> Intra l (init a)) (labels a)) \\ (flow e a)
     isolated [ ] = error "no isolated entries exist"
     isolated [x] = x
     isolated  _  = error "multiple isolated entries exist"
-  exits  :: Env -> a -> Set Label
+  exits  :: FTable -> a -> Set Label
   exits e = S.map from . exits'
     where
     exits' a = (S.foldMap (\l1 -> S.map (\l2 -> Intra l1 l2) (labels a)) (final a)) \\ (flow e a)

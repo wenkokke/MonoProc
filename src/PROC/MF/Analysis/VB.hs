@@ -1,4 +1,4 @@
-module PROC.MF.Analysis.VB where
+module PROC.MF.Analysis.VB (mfVB) where
 
 import Prelude hiding (init)
 import PROC.Base
@@ -15,7 +15,7 @@ mfVB :: Prog -> MF (Set AExpr)
 mfVB (Prog d s)
   = backwards s
   $ distributive killVB genVB
-  $ embelished (toEnv d)
+  $ embelished (mkFTable d)
   $ framework
   { getI = S.empty
   , getL = Lattice

@@ -81,7 +81,7 @@ data MF a = MF
   , getF   :: Set Flow              -- ^ control flow for analysis
   , getL   :: Lattice a             -- ^ lattice on property space
   , getT   :: Transfer a            -- ^ transfer function
-  , getD   :: Env                   -- ^ procedure declarations
+  , getD   :: FTable                   -- ^ procedure declarations
   , runMFP :: MF a -> Stmt -> MFP a -- ^ run the analysis
   }
   
@@ -131,7 +131,7 @@ distributive kill gen mf = mf { getT = transfer }
     genned = gen block
 
 -- |Easily make embellished monotone frameworks.
-embelished :: Env -> MF a -> MF a
+embelished :: FTable -> MF a -> MF a
 embelished env mf = mf { getD = env }
     
 -- |Empty monotone framework.
@@ -158,8 +158,8 @@ instance FreeNames Stmt where
   freeNames (Skip _)         = S.empty
   freeNames (IfThen _ s1 s2) = freeNames s1 <> freeNames s2
   freeNames (While _ s1)     = freeNames s1
-  freeNames (Call _ _ _ _)   = S.empty
   freeNames (Seq s1 s2)      = freeNames s1 <> freeNames s2
+  freeNames (Call _ _ _ _)   = S.empty
   
 instance FreeNames BExpr where
   freeNames (BConst _)  = S.empty
@@ -179,6 +179,24 @@ instance FreeNames AExpr where
   freeNames (Mul e1 e2) = freeNames e1 <> freeNames e2
   freeNames (Div e1 e2) = freeNames e1 <> freeNames e2
   freeNames (Neg e1)    = freeNames e1
+  
+-- * Assigned Variable Names
+
+class UsedNames a where
+  usedNames :: a -> Set Name
+  isUsedIn :: Name -> a -> Bool
+  isUsedIn x a = S.member x (usedNames a)
+
+instance UsedNames Prog where
+  usedNames (Prog _ s) = usedNames s
+  
+instance UsedNames Stmt where
+  usedNames (Assign _ x _)   = S.singleton x
+  usedNames (Skip _)         = S.empty
+  usedNames (IfThen _ s1 s2) = usedNames s1 <> usedNames s2
+  usedNames (While _ s1)     = usedNames s1
+  usedNames (Seq s1 s2)      = usedNames s1 <> usedNames s2
+  usedNames (Call _ _ _ _)   = S.empty
 
 -- * Available Expressions
 

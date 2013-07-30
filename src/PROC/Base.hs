@@ -19,10 +19,10 @@ data Decl
   = Decl Name [Name] Stmt
   deriving (Eq,Ord)
   
-type Env = Map Name Decl
+type FTable = Map Name Decl
 
-toEnv :: [Decl] -> Env
-toEnv d = M.fromList (map withName d)
+mkFTable :: [Decl] -> FTable
+mkFTable d = M.fromList (map withName d)
   where
   withName d@(Decl n _ _) = (n, d)
   

@@ -1,4 +1,4 @@
-module PROC.MF.Analysis.RD where
+module PROC.MF.Analysis.RD (mfRD) where
 
 import Prelude hiding (init)
 import PROC.Base
@@ -15,7 +15,7 @@ mfRD :: Prog -> MF (Set RD)
 mfRD (Prog d s)
   = forwards s
   $ distributive killRD genRD
-  $ embelished (toEnv d)
+  $ embelished (mkFTable d)
   $ framework
   { getI = S.map (\x -> RD x Nothing) (freeNames s)
   , getL = Lattice
