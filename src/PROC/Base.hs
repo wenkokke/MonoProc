@@ -75,7 +75,7 @@ instance Show Prog where
   
 instance PP Prog where
   pp (Prog decls stmts) =
-    pp stmts >-< vlist (map pp decls)
+    vlist (map pp decls) >-< pp stmts
   
 -- * Printing declarations
 
@@ -112,7 +112,7 @@ instance PP Stmt where
   pp (While b l)
                       = text "while" >#< pp_parens (pp b) >#<
                           text "{" >-< indent 2 l >-< text "}"
-  pp (Call _ _ f xs)  = text f >|< (pp_parens_list 80 $ map pp xs) >|< text ";"
+  pp (Call c r f xs)  = text f >|< (pp_parens_list 80 $ map pp xs) >#< pp_brackets (pp c >#< pp r) >|< text ";"
   pp (Seq c@(Call _ _ _ _) (Assign _ n (AName "return")))
                       = text n >#< text "=" >#< pp c
   pp (Seq a b)        = pp a >-< pp b

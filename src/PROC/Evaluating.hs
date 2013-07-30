@@ -6,6 +6,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Monoid ((<>))
 import Control.Applicative (pure,(<$>),(<*>))
 import Control.Monad.Error
 
@@ -13,40 +14,51 @@ type VTable = Map Name Integer
 type PROC a = Either String a
 
 class (UsedNames a) => Eval a where
-  eval :: a -> VTable -> PROC VTable
-  runEval :: a -> PROC VTable
-  runEval x = eval x (M.fromList $ zip (S.toList $ usedNames x) (repeat 0))
-  
-instance Eval Prog where
-  eval p@(Prog d s) env = eval s env
 
-instance Eval Stmt where
-  eval s env = case s of
-    Skip _                    -> return env
-    Assign _ x ae             -> do i <- evalAE env ae; return $ M.insert x i env
-    IfThen (BExpr _ be) s1 s2 -> do b <- evalBE env be; if b then eval s1 env else eval s2 env
-    While (BExpr _ be) s1     -> do b <- evalBE env be; if b then eval s1 env >>= eval s else return env
-    Seq s1 s2                 -> eval s1 env >>= eval s2
+evalProg :: Prog -> PROC VTable
+evalProg (Prog d s) = evalStmt fs s vs
+  where
+  fs = mkFTable d
+  vs = M.empty
+
+evalStmt :: FTable -> Stmt -> VTable -> PROC VTable
+evalStmt fs s vs = case s of
+  Skip _                    -> return vs
+  Assign _ x ae             -> do i <- evalAE vs ae; return $ M.insert x i vs
+  IfThen (BExpr _ be) s1 s2 -> do b <- evalBE vs be; if b then evalStmt fs s1 vs else evalStmt fs s2 vs
+  While (BExpr _ be) s1     -> do b <- evalBE vs be; if b then evalStmt fs s1 vs >>= evalStmt fs s else return vs
+  Seq s1 s2                 -> evalStmt fs s1 vs >>= evalStmt fs s2
+  Call _ _ n aes            -> case M.lookup n fs of
+    Just (Decl _ xs s)      ->
+    
+      do evaled      <- mapM (evalAE vs) aes;
+         let args     = M.fromList (zip xs evaled)
+         let shadowed = foldr (\x r -> maybe r (\i -> M.insert x i r) (M.lookup x vs)) M.empty xs
+         let callenv  = args <> vs
+         retenv      <- evalStmt fs s callenv
+         return $ shadowed <> (foldr M.delete retenv xs)
+         
+    Nothing                 -> throwError ("unknown function '"++n++"'")
     
 evalBE :: VTable -> BExpr -> PROC Bool
-evalBE env b = case b of
+evalBE vs b = case b of
   BConst e1 -> pure e1
-  Lt  e1 e2 -> (<)  <$> evalAE env e1 <*> evalAE env e2
-  Lte e1 e2 -> (<=) <$> evalAE env e1 <*> evalAE env e2
-  Gt  e1 e2 -> (>)  <$> evalAE env e1 <*> evalAE env e2
-  Gte e1 e2 -> (>=) <$> evalAE env e1 <*> evalAE env e2
-  Eq  e1 e2 -> (==) <$> evalAE env e1 <*> evalAE env e2
-  Neq e1 e2 -> (/=) <$> evalAE env e1 <*> evalAE env e2
-  Not e1    -> not  <$> evalBE env e1
+  Lt  e1 e2 -> (<)  <$> evalAE vs e1 <*> evalAE vs e2
+  Lte e1 e2 -> (<=) <$> evalAE vs e1 <*> evalAE vs e2
+  Gt  e1 e2 -> (>)  <$> evalAE vs e1 <*> evalAE vs e2
+  Gte e1 e2 -> (>=) <$> evalAE vs e1 <*> evalAE vs e2
+  Eq  e1 e2 -> (==) <$> evalAE vs e1 <*> evalAE vs e2
+  Neq e1 e2 -> (/=) <$> evalAE vs e1 <*> evalAE vs e2
+  Not e1    -> not  <$> evalBE vs e1
 
 evalAE :: VTable -> AExpr -> PROC Integer
-evalAE env a = case a of
-  AName n   -> case M.lookup n env of
+evalAE vs a = case a of
+  AName n   -> case M.lookup n vs of
                   Just i  -> pure i
                   Nothing -> throwError ("unbound variable '"++n++"'")
   AConst i  -> pure i
-  Add e1 e2 -> (+) <$> evalAE env e1 <*> evalAE env e2
-  Sub e1 e2 -> (-) <$> evalAE env e1 <*> evalAE env e2
-  Mul e1 e2 -> (*) <$> evalAE env e1 <*> evalAE env e2
-  Div e1 e2 -> div <$> evalAE env e1 <*> evalAE env e2
-  Neg e1    -> negate <$> evalAE env e1
+  Add e1 e2 -> (+) <$> evalAE vs e1 <*> evalAE vs e2
+  Sub e1 e2 -> (-) <$> evalAE vs e1 <*> evalAE vs e2
+  Mul e1 e2 -> (*) <$> evalAE vs e1 <*> evalAE vs e2
+  Div e1 e2 -> div <$> evalAE vs e1 <*> evalAE vs e2
+  Neg e1    -> negate <$> evalAE vs e1
