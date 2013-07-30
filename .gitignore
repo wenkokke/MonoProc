@@ -6,3 +6,5 @@
 /src/cabal-dev/packages-7.4.2.conf/*.cache
 
 /src/cabal-dev/packages/*.tar
+
+/src/cabal-dev/packages/*.cache

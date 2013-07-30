@@ -34,27 +34,26 @@ type MFP a = Label -> a
 -- |Compute the maximal fixed point for an MF.
 fixMFP :: MF a -> Stmt -> [Flow] -> MFP a -> MFP a
 fixMFP mf s [    ] mfp = mfp
-fixMFP mf s (w:ws) mfp = let
-
-    (l, l') = (from w, to w)        -- import flow as (l,l')
-    tr      = getT mf s l           -- import transfer function t
-    
-    x <: y = refines (getL mf) x y  -- import @refines@ operator
-    x \/ y = join (getL mf) x y     -- import @join@ operator
-    
-    mfpL    = tr (mfp l)            -- get new analysis for l
-    mfpL'   = mfp l'                -- get old analysis for l'
-
-  in if not (mfpL <: mfpL')         -- if we have a fixpoint,
-      then fixMFP mf s ws mfp       -- stop and return the current analysis
-      else let                      -- otherwise,
+fixMFP mf s (w:ws) mfp
+  | mfpL <: mfpL' = fixMFP mf s ws' mfp'
+  | otherwise     = fixMFP mf s ws mfp
+  where
+  
+    -- data: new analysis for l, old analysis for l'
+    mfpL   = tr (mfp l)
+    mfpL'  = mfp l'
       
-        -- add all flows from l' to the worklist
-        ws'    = filter (`flowsFrom` l') (ws0 mf) ++ ws
-        -- add the join of both computations to the result
-        mfp' k = if k == l' then mfpL \/ mfpL' else mfp k
-        
-      in fixMFP mf s ws' mfp'       -- recusively perform the analysis
+    -- recursive case: new worklist and intermediate result
+    ws'    = filter (`flowsFrom` l') (ws0 mf) ++ ws
+    mfp' k = if k == l' then mfpL \/ mfpL' else mfp k
+    
+    -- import: flow as (l,l') and transfer function as tr
+    (l,l') = (from w, to w)
+    tr     = getT mf s l
+    
+    -- import: refines as (<:) and join as (\/)
+    x <: y = refines (getL mf) x y
+    x \/ y = join (getL mf) x y
       
 -- |Show instances of MFP--which are functions--for a limited
 --  number of inputs.

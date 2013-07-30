@@ -20,7 +20,7 @@ mfVB (Prog d s)
   { getI = S.empty
   , getL = Lattice
     { join    = S.intersection
-    , refines = S.isSubsetOf
+    , refines = S.isProperSubsetOf
     , bottom  = available s
     }
   }

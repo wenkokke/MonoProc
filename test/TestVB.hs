@@ -13,7 +13,7 @@ import Text.ParserCombinators.UU.Utils (runParser,pBraces,pComma)
 
 main :: IO ()
 main = forM_ resl $ \(l,exp) -> do
-  let fnd = analyse mfAE prog l
+  let fnd = analyse mfVB prog l
   if exp == fnd
     then return ()
     else fail (printf "expected %s, found %s (at %d)" (show $ S.toList exp) (show $ S.toList fnd) l)
