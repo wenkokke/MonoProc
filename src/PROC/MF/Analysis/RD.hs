@@ -1,9 +1,10 @@
-module PROC.MF.Analysis.RD (mfRD) where
+module PROC.MF.Analysis.RD (mfRD,RD (..)) where
 
 import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Analysis
 import PROC.MF.Flowable
+import PROC.MF.FreeNames
 
 import Text.Printf (printf)
 import Data.Monoid ((<>))
@@ -12,12 +13,12 @@ import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
 mfRD :: Prog -> MF (Set RD)
-mfRD (Prog d s)
-  = forwards s
+mfRD p
+  = forwards p
+  $ embelished p
   $ distributive killRD genRD
-  $ embelished (mkFTable d)
   $ framework
-  { getI = S.map (\x -> RD x Nothing) (freeNames s)
+  { getI = S.map (\x -> RD x Nothing) (freeNames p)
   , getL = Lattice
     { join    = S.union
     , refines = flip S.isProperSubsetOf

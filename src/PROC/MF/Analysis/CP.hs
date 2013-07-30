@@ -1,4 +1,4 @@
-module PROC.MF.Analysis.CP (mfCP) where
+module PROC.MF.Analysis.CP (mfCP,CP,ZT) where
 
 import Prelude hiding (init)
 import PROC.Base
@@ -61,9 +61,9 @@ joinZT  Nothing   z2       = z2
 joinZT (Just z1) (Just z2) | z1 == z2  = Just z1 
                            | otherwise = Nothing
 mfCP :: Prog -> MF CP
-mfCP (Prog d s)
-  = forwards s
-  $ embelished (mkFTable d)
+mfCP p
+  = forwards p
+  $ embelished p
   $ framework
   { getI = topCP
   , getL = Lattice

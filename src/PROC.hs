@@ -4,7 +4,7 @@ module PROC
   , module PROC.Evaluating
   , module PROC.MF
   , mkProg , runProg
-  , ex1 , ex2 , ex3 , ex4 , fib
+  , ex1 , ex2 , ex3 , ex4 , ex5 , fib
   ) where
 
 import Prelude hiding (init)
@@ -25,20 +25,22 @@ mkProg = parseProg . unlines
 runProg :: Prog -> Maybe Integer
 runProg p = either (const Nothing) (M.lookup "return") (evalProg p)
 
+ex1, ex2, ex3, ex4, ex5 :: Prog
+
 ex1 = mkProg
   [ "x = 0;"
   , "while (x < 10) {"
   , "  x = x + 1;"
   , "}"
   ]
-  
+
 ex2 = mkProg
   [ "add(a,b) {"
   , "  return a + b;"
   , "}"
   , "add(3,5);"
   ]
-  
+
 ex3 = mkProg
   [ "next() {"
   , "  x = x + 1;"
@@ -48,7 +50,7 @@ ex3 = mkProg
   , "  next();"
   , "}"
   ]
-  
+
 ex4 = mkProg
   [ "mask(a) {"
   , "  a = a + 1;"
@@ -56,6 +58,20 @@ ex4 = mkProg
   , "}"
   , "a = 10;"
   , "mask(a);"
+  ]
+
+ex5 = mkProg
+  [ "fib(z,u) {"
+  , "  if (z < 3) {"
+  , "    return = u + 1;"
+  , "  }"
+  , "  else {"
+  , "    fib(z-1,u);"
+  , "    fib(z-2,return);"
+  , "  }"
+  , "  skip;"
+  , "}"
+  , "fib(5,0);"
   ]
 
 fib :: Integer -> Prog

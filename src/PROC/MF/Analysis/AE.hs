@@ -4,6 +4,8 @@ import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Analysis
 import PROC.MF.Flowable
+import PROC.MF.Available
+import PROC.MF.FreeNames
 
 import Data.Monoid ((<>))
 import Data.Set (Set,(\\))
@@ -11,16 +13,16 @@ import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
 mfAE :: Prog -> MF (Set AExpr)
-mfAE (Prog d s)
-  = forwards s
+mfAE p
+  = forwards p
+  $ embelished p
   $ distributive killAE genAE
-  $ embelished (mkFTable d)
   $ framework
   { getI = S.empty
   , getL = Lattice
     { join    = S.intersection
     , refines = S.isProperSubsetOf
-    , bottom  = available s
+    , bottom  = available p
     }
   }
 

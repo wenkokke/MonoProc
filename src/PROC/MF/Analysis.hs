@@ -9,6 +9,7 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
+-- |Runs an MFP analysis on a program and shows the result.
 analyseAndShow :: (Show a) => (Prog -> MF a) -> Prog -> String
 analyseAndShow mf p = showMFP (S.toList $ labels p) (analyse mf p)
 
@@ -79,6 +80,7 @@ data MF a = MF
   { getI   :: a                     -- ^ extremal values
   , getE   :: Set Label             -- ^ extremal labels
   , getF   :: Set Flow              -- ^ control flow for analysis
+  , getIF  :: Set InterFlow         -- ^ inter-procedural flow
   , getL   :: Lattice a             -- ^ lattice on property space
   , getT   :: Transfer a            -- ^ transfer function
   , getD   :: FTable                   -- ^ procedure declarations
@@ -99,18 +101,20 @@ joinall l = foldr (join l) (bottom l)
 -- * MF transformers
 
 -- |Easily make MF's for backwards analyses.
-forwards :: Stmt -> MF a -> MF a
-forwards s mf = mf
+forwards :: Prog -> MF a -> MF a
+forwards p@(Prog _ s) mf = mf
   { getE   = S.singleton (init s)
   , getF   = flow (getD mf) s
+  , getIF  = interFlow (getD mf) p
   , runMFP = analyseO
   }
 
 -- |Easily make MF's for forwards analyses.
-backwards :: Stmt -> MF a -> MF a
-backwards s mf = mf
+backwards :: Prog -> MF a -> MF a
+backwards p@(Prog _ s) mf = mf
   { getE   = final s
   , getF   = flowR (getD mf) s
+  , getIF  = interFlowR (getD mf) p
   , runMFP = analyseI
   }
   
@@ -129,103 +133,24 @@ distributive kill gen mf = mf { getT = transfer }
     block  = select l (blocks s)
     killed = kill block (bottom $ getL mf)
     genned = gen block
+    
+-- |Context for embelished monotone frameworks.
+data Context = Context
 
 -- |Easily make embellished monotone frameworks.
-embelished :: FTable -> MF a -> MF a
-embelished env mf = mf { getD = env }
+embelished :: Prog -> MF a -> MF a
+embelished (Prog d _) mf = mf { getD = mkFTable d }
     
 -- |Empty monotone framework.
 framework :: MF a
 framework  = MF
   { getI   = error "uninitialized property I"
-  , getE   = error "uninitialized property E"
-  , getF   = error "uninitialized property F"
+  , getE   = error "uninitialized property E (apply 'backwards' or 'forwards')"
+  , getF   = error "uninitialized property F (apply 'backwards' or 'forwards')"
+  , getIF  = error "uninitialized property IF (apply 'backwards' or 'forwards')"
   , getL   = error "uninitialized property L"
   , getT   = error "uninitialized property T"
-  , getD   = error "uninitialized property D"
+  , getD   = error "uninitialized property D (apply 'embelished' first)"
   , runMFP = error "uninitialized function `run'"
   }
-  
--- * Free Variable Names
-
-class FreeNames a where
-  freeNames :: a -> Set Name
-  isFreeIn :: Name -> a -> Bool
-  isFreeIn x a = S.member x (freeNames a)
-
-instance FreeNames Stmt where
-  freeNames (Assign _ _ a)   = freeNames a
-  freeNames (Skip _)         = S.empty
-  freeNames (IfThen _ s1 s2) = freeNames s1 <> freeNames s2
-  freeNames (While _ s1)     = freeNames s1
-  freeNames (Seq s1 s2)      = freeNames s1 <> freeNames s2
-  freeNames (Call _ _ _ _)   = S.empty
-  
-instance FreeNames BExpr where
-  freeNames (BConst _)  = S.empty
-  freeNames (Lt a1 a2)  = freeNames a1 <> freeNames a2
-  freeNames (Lte a1 a2) = freeNames a1 <> freeNames a2
-  freeNames (Gt a1 a2)  = freeNames a1 <> freeNames a2
-  freeNames (Gte a1 a2) = freeNames a1 <> freeNames a2
-  freeNames (Eq a1 a2)  = freeNames a1 <> freeNames a2
-  freeNames (Neq a1 a2) = freeNames a1 <> freeNames a2
-  freeNames (Not a1)    = freeNames a1
-  
-instance FreeNames AExpr where
-  freeNames (AName n)   = S.singleton n
-  freeNames (AConst _)  = S.empty
-  freeNames (Add e1 e2) = freeNames e1 <> freeNames e2
-  freeNames (Sub e1 e2) = freeNames e1 <> freeNames e2
-  freeNames (Mul e1 e2) = freeNames e1 <> freeNames e2
-  freeNames (Div e1 e2) = freeNames e1 <> freeNames e2
-  freeNames (Neg e1)    = freeNames e1
-  
--- * Assigned Variable Names
-
-class UsedNames a where
-  usedNames :: a -> Set Name
-  isUsedIn :: Name -> a -> Bool
-  isUsedIn x a = S.member x (usedNames a)
-
-instance UsedNames Prog where
-  usedNames (Prog _ s) = usedNames s
-  
-instance UsedNames Stmt where
-  usedNames (Assign _ x _)   = S.singleton x
-  usedNames (Skip _)         = S.empty
-  usedNames (IfThen _ s1 s2) = usedNames s1 <> usedNames s2
-  usedNames (While _ s1)     = usedNames s1
-  usedNames (Seq s1 s2)      = usedNames s1 <> usedNames s2
-  usedNames (Call _ _ _ _)   = S.empty
-
--- * Available Expressions
-
-class Available a where
-  available :: a -> Set AExpr
-
-instance Available Stmt where
-  available = S.foldMap available' . blocks
-    where
-    available' (Assign _ _ a) = available a
-    available' (BExpr _ b)    = available b
-    available' _ = S.empty
-
-instance Available BExpr where
-  available (BConst _)  = S.empty
-  available (Lt  a1 a2) = available a1 <> available a2
-  available (Lte a1 a2) = available a1 <> available a2
-  available (Gt  a1 a2) = available a1 <> available a2
-  available (Gte a1 a2) = available a1 <> available a2
-  available (Eq  a1 a2) = available a1 <> available a2
-  available (Neq a1 a2) = available a1 <> available a2
-  available (Not a1)    = available a1
-    
-instance Available AExpr where
-  available (AName _)     = S.empty
-  available (AConst _)    = S.empty
-  available a@(Add e1 e2) = S.insert a (available e1 <> available e1)
-  available a@(Sub e1 e2) = S.insert a (available e1 <> available e1)
-  available a@(Mul e1 e2) = S.insert a (available e1 <> available e1)
-  available a@(Div e1 e2) = S.insert a (available e1 <> available e1)
-  available a@(Neg e1)    = S.insert a (available e1)
   

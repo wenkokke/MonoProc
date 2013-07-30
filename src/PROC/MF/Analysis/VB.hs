@@ -4,6 +4,8 @@ import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Analysis
 import PROC.MF.Flowable
+import PROC.MF.Available
+import PROC.MF.FreeNames
 
 import Text.Printf (printf)
 import Data.Monoid ((<>))
@@ -12,16 +14,16 @@ import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
 mfVB :: Prog -> MF (Set AExpr)
-mfVB (Prog d s)
-  = backwards s
+mfVB p
+  = backwards p
+  $ embelished p
   $ distributive killVB genVB
-  $ embelished (mkFTable d)
   $ framework
   { getI = S.empty
   , getL = Lattice
     { join    = S.intersection
     , refines = S.isProperSubsetOf
-    , bottom  = available s
+    , bottom  = available p
     }
   }
 

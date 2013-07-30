@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 module PROC.MF.Flowable where
 
 import Prelude hiding (init)
@@ -6,15 +7,21 @@ import Text.Printf (printf)
 import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
+import qualified Data.Traversable as S (forM)
 import Data.Map (Map)
 import qualified Data.Map as M
+import Control.Applicative (pure,(<$>),(<*>))
 
+import Data.Maybe (catMaybes)
 import Data.Monoid
 
 data Flow
   = Intra Label Label
   | Inter Label Label
   deriving (Eq,Ord)
+  
+type InterFlow
+  = (Label,Label,Label,Label)
   
 instance Show Flow where
   show (Intra x y) = printf "(%s,%s)" (show x) (show y)
@@ -34,6 +41,20 @@ progFlow p@(Prog d _) = flow (mkFTable d) p
 --  en environment, and passes that to @flowR@.
 progFlowR :: Prog -> Set Flow
 progFlowR p@(Prog d _) = flowR (mkFTable d) p
+
+-- |Interprocedural flow within a program.
+interFlow :: (Flowable a) => FTable -> a -> Set InterFlow
+interFlow fs p = do
+  let calls  = S.filter isCall (blocks p)
+  S.foldMap (\(Call c r n _) ->
+              case M.lookup n fs of
+                Nothing -> S.empty
+                Just  d -> S.map (c,init d,,r) (final d)
+            ) calls
+            
+-- |Reversed interprocedural flow within a program.
+interFlowR :: (Flowable a) => FTable -> a -> Set InterFlow
+interFlowR = ( S.map (\(c,n,x,r) -> (r,x,n,c)) . ) . interFlow
 
 -- |Determines whether a flow begins in a specific label.
 flowsFrom :: Flow -> Label -> Bool
@@ -62,7 +83,6 @@ select l = isolated . S.elems . S.filter hasLabel
   hasLabel (Assign l' _ _) = l == l'
   hasLabel (BExpr l' _)    = l == l'
   hasLabel (Skip l')       = l == l'
---hasLabel (While b _)     = hasLabel b
   
 class Flowable a where
   init   :: a -> Label
@@ -121,7 +141,7 @@ instance Flowable Stmt where
   blocks s@(BExpr _ _)      = S.singleton s
   blocks s@(Seq s1 s2)      = blocks s1 <> blocks s2
   blocks s@(IfThen b s1 s2) = blocks b <> blocks s1 <> blocks s2
-  blocks s@(While b s1)     = blocks b <> blocks s1 -- removed: S.singleton s <> 
+  blocks s@(While b s1)     = blocks b <> blocks s1 
   blocks s@(Call _ _ _ _)   = S.singleton s
   
   flow e (Skip _)         = S.empty

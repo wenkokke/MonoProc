@@ -157,3 +157,10 @@ instance Wrap BExpr where
   
 class Wrap a where
   wrap :: a -> PP_Doc
+  
+-- * Predicates on Statements
+
+isCall :: Stmt -> Bool
+isCall s@(Call _ _ _ _) = True
+isCall _ = False
+
