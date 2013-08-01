@@ -3,16 +3,37 @@
 module PROC.Parsing where
 
 import PROC.Base
+import PROC.MF.Labelable (runLabel)
+import PROC.MF.Analysis.RD (RD (..))
+import PROC.MF.Analysis.CP (CP (..), ZT (..))
 
 import Data.Either (lefts,rights)
+import Data.Set (Set)
+import qualified Data.Set as S (fromList)
+import Data.Map (Map)
+import qualified Data.Map as M (fromList)
 
 import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.Idioms
 import Text.ParserCombinators.UU.BasicInstances
 
+-- |Parses a program by running the @pProg@ parser.
+parseProg  = runLabel . runParser "stdin" pProg
+
+-- |Parses a declaration expression by running the @pDecl@ parser.
+parseDecl  = runLabel . runParser "stdin" pDecl
+
+-- |Parses a statement expression by running the @pStmt@ parser.
+parseStmt  = runLabel . runParser "stdin" pStmt
+
+-- |Parses an arithmetic expression by running the @pAExpr@ parser.
 parseAExpr = runParser "stdin" pAExpr
+
+-- |Parses a boolean expression by running the @pBExpr@ parser.
 parseBExpr = runParser "stdin" pBExpr
+
+-- * Parsing the MonoProc Language
 
 -- |Parser for programs.
 pProg :: Parser Prog
@@ -79,14 +100,60 @@ pBExpr = pAtom <|> pOper <?> "BExpr"
 pName :: Parser Name
 pName = lexeme $ (:) <$> pLower <*> pMany (pLetter <|> pDigit <|> pUnderscore)
 
--- |Parser for several other characters.
-pUnderscore :: Parser Char
-pUnderscore = pSym '_'
+-- * Parsing the Analyses' Results
 
--- |Flipped function application for operator parsing.
-(&) :: a -> (a -> b) -> b
-(&) = flip ($)
+-- |Sets of @Name@s are used as the result type of e.g. Live Variable Analysis.
+pNameSet :: Parser (Set Name)
+pNameSet = pSetOf pName
+
+-- |Sets of @AExpr@s are used as the result type of e.g. Available Expression Analysis.
+pAExprSet :: Parser (Set AExpr)
+pAExprSet = pSetOf pAExpr
+
+-- |Sets of @RD@s are used as the result type of Reached-Definition Analysis.
+pRDSet :: Parser (Set RD)
+pRDSet = pSetOf pRD
+
+-- |Parses Reached-Definition information.
+pRD :: Parser RD
+pRD = iI RD "(" pName "," (pNone <|> pSome) ")" Ii
+  where
+  pNone = Nothing <$ pSym '?'
+  pSome = Just <$> pNatural
+  
+-- |Parses Constant-Propagation information.
+pCP :: Parser CP
+pCP = pNone <|> (CP <$> pMapOf pSome)
+  where
+  pSome :: Parser (Name,ZT)
+  pSome = iI (,) "(" pName "," pZT ")" Ii
+  pNone = Bottom <$ pSymbol "Bottom"
+
+-- |Parses Z+T expressions.
+pZT :: Parser ZT
+pZT = pSome <|> pNone
+  where
+  pSome = Z <$> pNatural
+  pNone = Top <$ pSym 'T'
+  
+-- * Utility Functions and Parsers
+
+-- |Parses a set of value, as @{a,b,c}@.
+pSetOf :: (Ord a) => Parser a -> Parser (Set a)
+pSetOf p = S.fromList <$> pBraces (pListSep pComma p)
+
+-- |Parses a set of value, as @{a,b,c}@.
+pMapOf :: (Ord k) => Parser (k,v) -> Parser (Map k v)
+pMapOf p = M.fromList <$> pBraces (pListSep pComma p)
 
 -- |Maps a list of operators with the same priority to a parser.
 samePrio :: [(Name,a)] -> Parser a
 samePrio ops = foldr (<|>) empty [ p <$ pSymbol op | (op, p) <- ops ]
+
+-- |Parser for several other characters.
+pUnderscore :: Parser Char
+pUnderscore = pSym '_'
+
+-- |Flipped function application used in operator parsing.
+(&) :: a -> (a -> b) -> b
+(&) = flip ($)

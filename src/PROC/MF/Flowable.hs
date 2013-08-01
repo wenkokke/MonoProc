@@ -19,7 +19,10 @@ data Flow
   = Intra Label Label
   | Inter Label Label
   deriving (Eq,Ord)
-  
+
+type IntraFlow
+  = (Label,Label)
+
 type InterFlow
   = (Label,Label,Label,Label)
   
@@ -32,17 +35,21 @@ swap :: Flow -> Flow
 swap (Intra a b) = Intra b a
 swap (Inter a b) = Inter b a
 
--- |Uses the declarations in a @Prog@ constructor to create
---  en environment, and passes that to @flow@.
-progFlow :: Prog -> Set Flow
-progFlow p@(Prog d _) = flow (mkFTable d) p
+-- |Converts @Flow@ instances to tuples.
+toIntra :: Flow -> Maybe IntraFlow
+toIntra (Intra a b) = Just (a,b)
+toIntra  _          = Nothing
 
--- |Uses the declarations in a @Prog@ constructor to create
---  en environment, and passes that to @flowR@.
-progFlowR :: Prog -> Set Flow
-progFlowR p@(Prog d _) = flowR (mkFTable d) p
+-- |Decides whether a flow is intra- or interprocedural.
+isIntra :: Flow -> Bool
+isIntra (Intra _ _) = True
+isIntra _ = False
 
--- |Interprocedural flow within a program.
+-- |Complement of @isIntra@.
+isInter :: Flow -> Bool
+isInter = not . isIntra
+
+-- |Interprocedural flow.
 interFlow :: (Flowable a) => FTable -> a -> Set InterFlow
 interFlow fs p = do
   let calls  = S.filter isCall (blocks p)
@@ -52,9 +59,27 @@ interFlow fs p = do
                 Just  d -> S.map (c,init d,,r) (final d)
             ) calls
             
--- |Reversed interprocedural flow within a program.
+-- |Reversed interprocedural flow.
 interFlowR :: (Flowable a) => FTable -> a -> Set InterFlow
 interFlowR = ( S.map (\(c,n,x,r) -> (r,x,n,c)) . ) . interFlow
+
+-- |Uses the declarations in a @Prog@ constructor to create
+--  en environment, and passes that to @flow@.
+progFlow :: Prog -> Set Flow
+progFlow p@(Prog d _) = flow (mkFTable d) p
+
+-- |Uses the declarations in a @Prog@ constructor to create
+--  en environment, and passes that to @flowR@.
+progFlowR :: Prog -> Set Flow
+progFlowR p@(Prog d _) = flowR (mkFTable d) p
+     
+-- |Interprocedural flow within a program.
+progInterFlow :: Prog -> Set InterFlow
+progInterFlow p@(Prog d _) = interFlow (mkFTable d) p
+
+-- |Reversed interprocedural flow within a program.
+progInterFlowR :: Prog -> Set InterFlow
+progInterFlowR p@(Prog d _) = interFlowR (mkFTable d) p
 
 -- |Determines whether a flow begins in a specific label.
 flowsFrom :: Flow -> Label -> Bool

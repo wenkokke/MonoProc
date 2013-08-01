@@ -1,27 +1,19 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import PROC
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Foldable (forM_)
-import Text.Printf (printf)
+import PROC.MF.Analysis.LV
+import PROC.Testing (testAnalysis)
+import PROC.Parsing (pNameSet)
 
-import Text.ParserCombinators.UU ((<$),(<$>),(<|>),pListSep)
-import Text.ParserCombinators.UU.BasicInstances (Parser,pSym)
-import Text.ParserCombinators.UU.Idioms (iI,Ii (..))
-import Text.ParserCombinators.UU.Utils (runParser,pComma,pNatural,pBraces)
+import Data.Set (Set)
+import Text.ParserCombinators.UU.Utils (runParser)
 
 main :: IO ()
-main = forM_ resl $ \(l,exp) -> do
-  let fnd = analyse mfLV prog l
-  if exp == fnd
-    then return ()
-    else fail (printf "expected %s, found %s (at %d)" (show $ S.toList exp) (show $ S.toList fnd) l)
+main = do testAnalysis mfp mfLV progLV reslLV
+          testAnalysis mop mfLV progLV reslLV
 
-prog :: Prog
-prog = mkProg
+progLV :: Prog
+progLV = mkProg
   [ "x = 2;"
   , "y = 4;"
   , "x = 1;"
@@ -34,8 +26,8 @@ prog = mkProg
   , "x = z;"
   ]
 
-resl :: [(Label, Set Name)]
-resl = vars
+reslLV :: [(Label, Set Name)]
+reslLV = vars
   [ "{}"
   , "{y}"
   , "{x,y}"
@@ -44,9 +36,6 @@ resl = vars
   , "{z}"
   , "{}"
   ]
-
-vars :: [String] -> [(Label, Set Name)]
-vars = zip [1..] . map (runParser "stdin" pVars)
   
-pVars :: Parser (Set Name)
-pVars = S.fromList <$> pBraces (pListSep pComma pName)
+vars :: [String] -> [(Label, Set Name)]
+vars = zip [1..] . map (runParser "stdin" pNameSet)

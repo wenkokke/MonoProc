@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 module PROC.MF.Analysis.RD (mfRD,RD (..)) where
 
 import Prelude hiding (init)
@@ -12,6 +14,18 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
+import Text.ParserCombinators.UU ((<$),(<$>),(<|>),pListSep)
+import Text.ParserCombinators.UU.BasicInstances (Parser,pSym)
+import Text.ParserCombinators.UU.Idioms (iI,Ii (..))
+import Text.ParserCombinators.UU.Utils (runParser,pComma,pNatural,pBraces)
+
+-- * Monotone Framework Instance
+
+-- |Monotone Framework for Reached-Definition Analysis.
+--  The intuition of this analysis is to find out which assignments
+--  have an effect on the program, i.e. which assignments are "reached".
+--  For instance, when a variable "x" is assigned to, and then immediately
+--  reassigned, the initial value is never used.
 mfRD :: Prog -> MF (Set RD)
 mfRD p
   = forwards p
@@ -38,6 +52,11 @@ genRD (BExpr _ _)     = S.empty
 
 -- * Reached-Definitions Type
 
+-- |Represents the information returned by Reached-Definition Analysis.
+--  It stores whether or not a variable has been assigned to, and if,
+--  in what label. For instance, @{x,?}@ means that the variable @x@ has
+--  not yet been assigned to, whereas @{y,5}@ has (at this point in the
+--  program) been assigned a value in label @5@.
 data RD = RD Name (Maybe Label)
 
 instance Show RD where
@@ -49,3 +68,4 @@ instance Eq RD where
 
 instance Ord RD where
   compare (RD x _) (RD y _) = compare x y
+

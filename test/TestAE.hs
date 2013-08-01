@@ -1,27 +1,19 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import PROC
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Foldable (forM_)
-import Text.Printf (printf)
+import PROC.MF.Analysis.AE
+import PROC.Testing (testAnalysis)
+import PROC.Parsing (pAExprSet)
 
-import Text.ParserCombinators.UU ((<$),(<$>),(<|>),pListSep)
-import Text.ParserCombinators.UU.BasicInstances (Parser,pSym)
-import Text.ParserCombinators.UU.Idioms (iI,Ii (..))
-import Text.ParserCombinators.UU.Utils (runParser,pComma,pNatural,pBraces)
+import Data.Set (Set)
+import Text.ParserCombinators.UU.Utils (runParser)
   
 main :: IO ()
-main = forM_ resl $ \(l,exp) -> do
-  let fnd = analyse mfAE prog l
-  if exp == fnd
-    then return ()
-    else fail (printf "expected %s, found %s (at %d)" (show $ S.toList exp) (show $ S.toList fnd) l)
+main = do testAnalysis mfp mfAE progAE reslAE
+          testAnalysis (mopk 3) mfAE progAE reslAE
     
-prog :: Prog
-prog = mkProg
+progAE :: Prog
+progAE = mkProg
   [ "x = a + b;"
   , "y = a * b;"
   , "while (y > a + b) {"
@@ -30,8 +22,8 @@ prog = mkProg
   , "}"
   ]
 
-resl :: [(Label, Set AExpr)]
-resl = aexprs
+reslAE :: [(Label, Set AExpr)]
+reslAE = aexprs
   [ "{a + b}"
   , "{a * b, a + b}"
   , "{a + b}"
@@ -41,6 +33,3 @@ resl = aexprs
 
 aexprs :: [String] -> [(Label, Set AExpr)]
 aexprs = zip [1..] . map (runParser "stdin" pAExprSet)
-  
-pAExprSet :: Parser (Set AExpr)
-pAExprSet = S.fromList <$> pBraces (pListSep pComma pAExpr)

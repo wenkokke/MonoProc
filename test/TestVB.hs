@@ -1,25 +1,19 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Main where
 
 import PROC
+import PROC.MF.Analysis.VB
+import PROC.Testing (testAnalysis)
+import PROC.Parsing (pAExprSet)
+
 import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Foldable (forM_)
-import Text.Printf (printf)
-import Text.ParserCombinators.UU ((<$>),pListSep)
-import Text.ParserCombinators.UU.BasicInstances (Parser)
-import Text.ParserCombinators.UU.Utils (runParser,pBraces,pComma)
+import Text.ParserCombinators.UU.Utils (runParser)
 
 main :: IO ()
-main = forM_ resl $ \(l,exp) -> do
-  let fnd = analyse mfVB prog l
-  if exp == fnd
-    then return ()
-    else fail (printf "expected %s, found %s (at %d)" (show $ S.toList exp) (show $ S.toList fnd) l)
+main = do testAnalysis mfp mfVB progVB reslVB
+          testAnalysis mop mfVB progVB reslVB
     
-prog :: Prog
-prog = mkProg
+progVB :: Prog
+progVB = mkProg
   [ "if (a > b) {"
   , "  x = b - a;"
   , "  y = a - b;"
@@ -30,8 +24,8 @@ prog = mkProg
   , "}"
   ]
 
-resl :: [(Label, Set AExpr)]
-resl = aexprs
+reslVB :: [(Label, Set AExpr)]
+reslVB = aexprs
   [ "{a - b, b - a}"
   , "{a - b}"
   , "{}"
@@ -41,6 +35,3 @@ resl = aexprs
 
 aexprs :: [String] -> [(Label, Set AExpr)]
 aexprs = zip [1..] . map (runParser "stdin" pAExprSet)
-  
-pAExprSet :: Parser (Set AExpr)
-pAExprSet = S.fromList <$> pBraces (pListSep pComma pAExpr)

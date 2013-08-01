@@ -4,7 +4,7 @@ module PROC
   , module PROC.Evaluating
   , module PROC.MF
   , mkProg , runProg
-  , ex1 , ex2 , ex3 , ex4 , ex5 , fib
+  , ex1 , ex2 , ex3 , ex4 , ex5 , ex6 , fib
   ) where
 
 import Prelude hiding (init)
@@ -15,17 +15,11 @@ import PROC.MF
 import qualified Data.Map as M
 import Text.ParserCombinators.UU.Utils (runParser)
 
-parseProg  = runLabel . runParser "stdin" pProg
-parseDecl  = runLabel . runParser "stdin" pDecl
-parseStmt  = runLabel . runParser "stdin" pStmt
-
 mkProg :: [String] -> Prog
 mkProg = parseProg . unlines
 
 runProg :: Prog -> Maybe Integer
 runProg p = either (const Nothing) (M.lookup "return") (evalProg p)
-
-ex1, ex2, ex3, ex4, ex5 :: Prog
 
 ex1 = mkProg
   [ "x = 0;"
@@ -54,6 +48,8 @@ ex3 = mkProg
 ex4 = mkProg
   [ "mask(a) {"
   , "  a = a + 1;"
+  , "  a = a + 2;"
+  , "  a = a + 3;"
   , "  return a;"
   , "}"
   , "a = 10;"
@@ -72,6 +68,19 @@ ex5 = mkProg
   , "  skip;"
   , "}"
   , "fib(5,0);"
+  ]
+
+ex6 = mkProg
+  [ "x = 2;"
+  , "y = 4;"
+  , "x = 1;"
+  , "if (y > x) {"
+  , "  z = y;"
+  , "}"
+  , "else {"
+  , "  z = y * y;"
+  , "}"
+  , "x = z;"
   ]
 
 fib :: Integer -> Prog
