@@ -14,7 +14,7 @@ import qualified Data.List as L (init)
 -- * Meet Over all Paths (MOP) Analysis
 
 -- |Performs a MOP-k analysis with a large value for @k@.
-mop :: Algorithm a
+mop :: Algorithm a a
 mop = mopk maxBound
 
 -- |Performs a Meet Over all Paths where paths are limited to @k@ repetitions
@@ -25,7 +25,7 @@ mop = mopk maxBound
 --  safe side when presented with a looping or recursive program. This is because some
 --  critical paths may not be generated with a low enough value for @k@. It's use for
 --  the analysis of these programs should therefore be dissuaded.
-mopk :: Int -> Algorithm a
+mopk :: Int -> Algorithm a a
 mopk k mf s l
   | k < 2     = error "mopk: k should be a large integer >= 3"
   | otherwise = joinall (getL mf) . map ($ getI mf) $ tr
@@ -45,7 +45,7 @@ vkpaths k mf l = concatMap (\i -> vkpaths' k intraflow interflow [l] i l) extrem
 -- |Composes the transfer functions along a path.
 getTforPath :: MF a -> Stmt -> Path -> a -> a
 getTforPath mf s [    ] = id
-getTforPath mf s (l:ls) = getTforPath mf s ls . getT mf s l
+getTforPath mf s (l:ls) = getTforPath mf s ls . applyT mf s l
 
 -- |A path is an ordered list of visited program labels.
 type Path = [Label]

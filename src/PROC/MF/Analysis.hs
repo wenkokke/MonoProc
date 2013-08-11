@@ -14,7 +14,7 @@ import qualified Data.Foldable as S (foldMap)
 import Text.Printf (printf)
 
 -- |Runs an Analysis analysis on a program and shows the result.
-analyseAndShow :: (Show a) => Algorithm a -> (Prog -> MF a) -> Prog -> String
+analyseAndShow :: (Show b) => (MF a -> Stmt -> Analysis b) -> (Prog -> MF a) -> Prog -> String
 analyseAndShow alg mf p = showAnalysis (S.toList $ labels p) (analyse alg mf p)
       
 -- |Show instances of Analysis--which are functions--for a limited
@@ -26,18 +26,18 @@ showAnalysis ls analysis = unlines $ map (\l -> printf "%d: %s" l (show $ analys
 type Analysis a = Label -> a
 
 -- |A method is an algorithm for obtaining an analysis from an MF and a program.
-type Algorithm a = MF a -> Stmt -> Analysis a
+type Algorithm a b = MF a -> Stmt -> Analysis b
 
 -- |Runs an Analysis analysis on a program at a certain label.
-analyse :: (MF a -> Stmt -> Analysis a) -> (Prog -> MF a) -> Prog -> Analysis a
+analyse :: (MF a -> Stmt -> Analysis b) -> (Prog -> MF a) -> Prog -> Analysis b
 analyse alg mkMF p@(Prog d s) l
   | S.member l (labels p) = alg (mkMF p) s l
   | otherwise             = error ("no statement with label " ++ show l)
 
 -- * Monotone Frameworks
   
--- |Type for transfer functions of MF's.
-type Transfer a = Stmt -> Label -> a -> a
+-- |Type for transfer functions in an MF.
+type Transfer a = Stmt -> a -> a
 
 data Direction = Forwards | Backwards
 
@@ -89,6 +89,10 @@ backwards p@(Prog _ s) mf = mf
   , direction = Backwards
   }
   
+-- |Applies a transfer function for a nested block.
+applyT :: MF a -> Stmt -> Label -> a -> a
+applyT mf s l = getT mf (select l (blocks s))
+  
 -- |Type for @kill@ functions of distributive MF's.
 type Kill a = Stmt -> a -> a
 
@@ -99,14 +103,10 @@ type Gen a = Stmt -> a
 distributive :: (Ord a) => Kill (Set a) -> Gen (Set a) -> MF (Set a) -> MF (Set a)
 distributive kill gen mf = mf { getT = transfer }
   where
-  transfer s l rs = (rs \\ killed) <> genned
+  transfer s rs = (rs \\ killed) <> genned
     where
-    block  = select l (blocks s)
-    killed = kill block (bottom $ getL mf)
-    genned = gen block
-    
--- |Context for embelished monotone frameworks.
-data Context = Context
+    killed = kill s (bottom $ getL mf)
+    genned = gen s
 
 -- |Easily make embellished monotone frameworks.
 embelished :: Prog -> MF a -> MF a
@@ -115,13 +115,13 @@ embelished (Prog d _) mf = mf { getD = mkFTable d }
 -- |Empty monotone framework.
 framework :: MF a
 framework  = MF
-  { getI      = error "uninitialized property I"
-  , getE      = error "uninitialized property E (apply 'backwards' or 'forwards')"
-  , getF      = error "uninitialized property F (apply 'backwards' or 'forwards')"
-  , getIF     = error "uninitialized property IF (apply 'backwards' or 'forwards')"
-  , getL      = error "uninitialized property L"
-  , getT      = error "uninitialized property T"
-  , getD      = error "uninitialized property D (apply 'embelished' first)"
-  , direction = error "uninitialized property `direction'"
+  { getI      = error "uninitialized property 'I'"
+  , getE      = error "uninitialized property 'E' (apply 'backwards' or 'forwards')"
+  , getF      = error "uninitialized property 'F' (apply 'backwards' or 'forwards')"
+  , getIF     = error "uninitialized property 'IF' (apply 'backwards' or 'forwards')"
+  , getL      = error "uninitialized property 'L'"
+  , getT      = error "uninitialized property 'T'"
+  , getD      = error "uninitialized property 'D' (apply 'embelished')"
+  , direction = error "uninitialized property 'direction'"
   }
   

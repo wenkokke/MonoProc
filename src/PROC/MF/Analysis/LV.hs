@@ -11,6 +11,9 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
+-- * Monotone Framework Instance
+
+-- |Monotone Framework for Live Variable Analysis.
 mfLV :: Prog -> MF (Set Name)
 mfLV p
   = backwards p

@@ -7,8 +7,14 @@ author        : Pepijn Kokke
 maintainer    : pepijn.kokke@gmail.com
 copyright     : (c) 2013 Pepijn Kokke, Wout Elsinghorst
 category      : Language
-build-type    : Custom
+build-type    : Simple
 cabal-version : >= 1.8
+
+library
+  exposed-modules : PROC
+  build-depends   : base == 4.5.*, uu-parsinglib == 2.8.*, uulib == 0.9.*,
+                    monad-supply == 0.3.*, mtl == 2.1.*, containers == 0.4.2.*
+  hs-source-dirs  : src
 
 test-suite test-ae
   type            : exitcode-stdio-1.0
@@ -44,9 +50,3 @@ test-suite test-cp
   build-depends   : base == 4.5.*, uu-parsinglib == 2.8.*, uulib == 0.9.*,
                     monad-supply == 0.3.*, mtl == 2.1.*, containers == 0.4.2.*
   hs-source-dirs  : src test
-
-library
-  exposed-modules : PROC
-  build-depends   : base == 4.5.*, uu-parsinglib == 2.8.*, uulib == 0.9.*,
-                    monad-supply == 0.3.*, mtl == 2.1.*, containers == 0.4.2.*
-  hs-source-dirs  : src

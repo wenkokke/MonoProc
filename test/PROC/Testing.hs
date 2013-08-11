@@ -5,7 +5,7 @@ import PROC
 import Data.Foldable (forM_)
 import Text.Printf (printf)
 
-testAnalysis :: (Show a, Eq a) => Algorithm a -> (Prog -> MF a) -> Prog -> [(Label, a)] -> IO ()
+testAnalysis :: (Show b, Eq b) => Algorithm a b -> (Prog -> MF a) -> Prog -> [(Label, b)] -> IO ()
 testAnalysis alg mf prog resl = forM_ resl $ \(l,exp) -> do
   let fnd = analyse alg mf prog l
   if exp == fnd

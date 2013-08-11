@@ -32,7 +32,7 @@ instance Show Flow where
   
 -- |Reverses a @Flow@ tuple.
 swap :: Flow -> Flow
-swap (Intra a b) = Intra b a
+swap (Intra a b) = Intra  b a
 swap (Inter a b) = Inter b a
 
 -- |Converts @Flow@ instances to tuples.
@@ -40,16 +40,16 @@ toIntra :: Flow -> Maybe IntraFlow
 toIntra (Intra a b) = Just (a,b)
 toIntra  _          = Nothing
 
--- |Decides whether a flow is intra- or interprocedural.
+-- |Returns whether or not a flow is intraprocedural.
 isIntra :: Flow -> Bool
 isIntra (Intra _ _) = True
-isIntra _ = False
+isIntra  _          = False
 
--- |Complement of @isIntra@.
+-- |Returns whether or not a flow is interprocedural.
 isInter :: Flow -> Bool
 isInter = not . isIntra
 
--- |Interprocedural flow.
+-- |Computes the interprocedural flow in a program.
 interFlow :: (Flowable a) => FTable -> a -> Set InterFlow
 interFlow fs p = do
   let calls  = S.filter isCall (blocks p)
@@ -59,7 +59,7 @@ interFlow fs p = do
                 Just  d -> S.map (c,init d,,r) (final d)
             ) calls
             
--- |Reversed interprocedural flow.
+-- |Computes the reversed interprocedural flow in a program.
 interFlowR :: (Flowable a) => FTable -> a -> Set InterFlow
 interFlowR = ( S.map (\(c,n,x,r) -> (r,x,n,c)) . ) . interFlow
 
@@ -101,13 +101,16 @@ to   (Inter _ r) = r
 select :: Label -> Set Stmt -> Stmt
 select l = isolated . S.elems . S.filter hasLabel 
   where
+  isolated :: [Stmt] -> Stmt
   isolated [ ] = error ("no statement with label " ++ show l)
   isolated [x] = x
   isolated  _  = error ("multiple statements with label " ++ show l)
+  
   hasLabel :: Stmt -> Bool
   hasLabel (Assign l' _ _) = l == l'
   hasLabel (BExpr l' _)    = l == l'
   hasLabel (Skip l')       = l == l'
+  hasLabel  _              = False
   
 class Flowable a where
   init   :: a -> Label

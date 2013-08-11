@@ -12,6 +12,9 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
+-- * Monotone Framework Instance
+
+-- |Monotone Framework for Available Expression Analysis.
 mfAE :: Prog -> MF (Set AExpr)
 mfAE p
   = forwards p

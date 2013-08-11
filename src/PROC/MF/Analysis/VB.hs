@@ -13,6 +13,9 @@ import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 
+-- * Monotone Framework Instance
+
+-- |Monotone Framework for Very Busy Expression Analysis.
 mfVB :: Prog -> MF (Set AExpr)
 mfVB p
   = backwards p

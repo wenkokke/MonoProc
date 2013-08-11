@@ -105,7 +105,7 @@ joinZT (Z z1) (Z z2) | z1 == z2  = Z z1
                      | otherwise = Top
 
 transferCP :: Transfer CP
-transferCP s l m = case select l (blocks s) of
+transferCP s m = case s of
   (Assign _ x a) -> case m of
                       Bottom -> Bottom
                       CP m   -> CP $ case (M.lookup x m, evalAE m a) of

@@ -19,6 +19,11 @@ import Text.ParserCombinators.UU.Utils (runParser)
 main :: IO ()
 main = do testAnalysis mop mfCP progCP reslCP1
           testAnalysis mfp mfCP progCP reslCP2
+          
+          -- this one is kinda superfluous, since if we know that the
+          -- results are reslCP1 and reslCP2, and we know that the refinement
+          -- relation holds between these... well, then this will always succeed...
+          
           let mopCP = analyse mop mfCP progCP
           let mfpCP = analyse mfp mfCP progCP
           let (<:)  = refines (getL $ mfCP progCP)
