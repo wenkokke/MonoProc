@@ -26,10 +26,10 @@ mop = mopk maxBound
 --  critical paths may not be generated with a low enough value for @k@. It's use for
 --  the analysis of these programs should therefore be dissuaded.
 mopk :: Int -> Algorithm a a
-mopk k mf s l
+mopk k mf l
   | k < 2     = error "mopk: k should be a large integer >= 3"
   | otherwise = joinall (getL mf) . map ($ getI mf) $ tr
-     where tr = map (getTforPath mf s) (vkpaths k mf l)
+     where tr = map (getTforPath mf) (vkpaths k mf l)
   
 -- |Generates all valid paths through a program with up to @k@ reperititons
 --  of the same label.
@@ -43,9 +43,9 @@ vkpaths k mf l = concatMap (\i -> vkpaths' k intraflow interflow [l] i l) extrem
   extremals = S.toList $ getE  mf
 
 -- |Composes the transfer functions along a path.
-getTforPath :: MF a -> Stmt -> Path -> a -> a
-getTforPath mf s [    ] = id
-getTforPath mf s (l:ls) = getTforPath mf s ls . applyT mf s l
+getTforPath :: MF a -> Path -> a -> a
+getTforPath mf [    ] = id
+getTforPath mf (l:ls) = getTforPath mf ls . applyT mf l
 
 -- |A path is an ordered list of visited program labels.
 type Path = [Label]

@@ -34,6 +34,7 @@ instance FreeNames BExpr where
   freeNames (Not a1)    = freeNames a1
   
 instance FreeNames AExpr where
+  freeNames (ANull)     = S.empty
   freeNames (AName n)   = S.singleton n
   freeNames (AConst _)  = S.empty
   freeNames (Add e1 e2) = freeNames e1 <> freeNames e2

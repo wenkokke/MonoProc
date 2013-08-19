@@ -19,8 +19,8 @@ import qualified Data.Foldable as S (foldMap)
 mfVB :: Prog -> MF (Set AExpr)
 mfVB p
   = backwards p
-  $ embelished p
   $ distributive killVB genVB
+  $ embelished p
   $ framework
   { getI = S.empty
   , getL = Lattice

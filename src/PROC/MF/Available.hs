@@ -40,10 +40,11 @@ instance Available BExpr where
   available (Not a1)    = available a1
     
 instance Available AExpr where
+  available (ANull)       = S.empty
   available (AName _)     = S.empty
   available (AConst _)    = S.empty
-  available a@(Add e1 e2) = S.insert a (available e1 <> available e1)
-  available a@(Sub e1 e2) = S.insert a (available e1 <> available e1)
-  available a@(Mul e1 e2) = S.insert a (available e1 <> available e1)
-  available a@(Div e1 e2) = S.insert a (available e1 <> available e1)
+  available a@(Add e1 e2) = S.insert a (available e1 <> available e2)
+  available a@(Sub e1 e2) = S.insert a (available e1 <> available e2)
+  available a@(Mul e1 e2) = S.insert a (available e1 <> available e2)
+  available a@(Div e1 e2) = S.insert a (available e1 <> available e2)
   available a@(Neg e1)    = S.insert a (available e1)

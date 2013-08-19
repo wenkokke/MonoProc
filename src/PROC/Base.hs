@@ -37,7 +37,8 @@ data Stmt
   deriving (Eq,Ord)
   
 data AExpr
-  = AName Name
+  = ANull
+  | AName Name
   | AConst Integer
   | Add AExpr AExpr
   | Sub AExpr AExpr
@@ -123,6 +124,7 @@ instance Show AExpr where
   show = show . pp
   
 instance PP AExpr where
+  pp (ANull)    = text "?"
   pp (AName n)  = text n
   pp (AConst i) = text (show i)
   pp (Add x y)  = wrap x >#< text "+" >#< wrap y
@@ -163,4 +165,3 @@ class Wrap a where
 isCall :: Stmt -> Bool
 isCall s@(Call _ _ _ _) = True
 isCall _ = False
-

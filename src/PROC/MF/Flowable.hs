@@ -110,6 +110,7 @@ select l = isolated . S.elems . S.filter hasLabel
   hasLabel (Assign l' _ _) = l == l'
   hasLabel (BExpr l' _)    = l == l'
   hasLabel (Skip l')       = l == l'
+  hasLabel (Call c r _ _)  = l == c || l == r
   hasLabel  _              = False
   
 class Flowable a where
@@ -117,7 +118,7 @@ class Flowable a where
   final  :: a -> Set Label
   blocks :: a -> Set Stmt
   labels :: a -> Set Label
-  labels  = S.map init . blocks
+  labels  = S.foldMap labels . blocks
   flow   :: FTable -> a -> Set Flow
   flowR  :: FTable -> a -> Set Flow
   flowR e = S.map swap . flow e
@@ -132,7 +133,7 @@ class Flowable a where
   exits e = S.map from . exits'
     where
     exits' a = (S.foldMap (\l1 -> S.map (\l2 -> Intra l1 l2) (labels a)) (final a)) \\ (flow e a)
-
+    
 instance Flowable Prog where
   init   (Prog d s) = init s
   final  (Prog d s) = final s
@@ -163,6 +164,14 @@ instance Flowable Stmt where
   final (While b _)       = final b
   final (BExpr l _)       = S.singleton l
   final (Call _ r _ _)    = S.singleton r
+  
+  labels (Skip l)         = S.singleton l
+  labels (Assign l _ _)   = S.singleton l
+  labels (Seq s1 s2)      = labels s1 <> labels s2
+  labels (IfThen b s1 s2) = labels b <> labels s1 <> labels s2
+  labels (While b s)      = labels b <> labels s
+  labels (BExpr l _)      = S.singleton l
+  labels (Call c r _ _)   = S.fromList [c,r]
   
   blocks s@(Skip _)         = S.singleton s
   blocks s@(Assign _ _ _)   = S.singleton s

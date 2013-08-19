@@ -29,8 +29,8 @@ import Text.ParserCombinators.UU.Utils (runParser,pComma,pNatural,pBraces)
 mfRD :: Prog -> MF (Set RD)
 mfRD p
   = forwards p
-  $ embelished p
   $ distributive killRD genRD
+  $ embelished p
   $ framework
   { getI = S.map (\x -> RD x Nothing) (freeNames p)
   , getL = Lattice

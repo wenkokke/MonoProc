@@ -17,8 +17,8 @@ import qualified Data.Foldable as S (foldMap)
 mfLV :: Prog -> MF (Set Name)
 mfLV p
   = backwards p
-  $ embelished p
   $ distributive killLV genLV
+  $ embelished p
   $ framework
   { getI = S.empty
   , getL = Lattice

@@ -6,6 +6,8 @@ import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Flowable
 
+import Debug.Trace
+
 import Control.Applicative ((<$>))
 import Data.Monoid ((<>))
 import Data.Set (Set,(\\))
@@ -13,8 +15,12 @@ import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 import Text.Printf (printf)
 
+-- |Runs an Analysis analysis on a program and prints the result to stdout.
+analyseAndPrint :: (Show b) => Algorithm a b -> (Prog -> MF a) -> Prog -> IO ()
+analyseAndPrint = ((putStrLn . ) . ) . analyseAndShow
+
 -- |Runs an Analysis analysis on a program and shows the result.
-analyseAndShow :: (Show b) => (MF a -> Stmt -> Analysis b) -> (Prog -> MF a) -> Prog -> String
+analyseAndShow :: (Show b) => Algorithm a b -> (Prog -> MF a) -> Prog -> String
 analyseAndShow alg mf p = showAnalysis (S.toList $ labels p) (analyse alg mf p)
       
 -- |Show instances of Analysis--which are functions--for a limited
@@ -26,12 +32,12 @@ showAnalysis ls analysis = unlines $ map (\l -> printf "%d: %s" l (show $ analys
 type Analysis a = Label -> a
 
 -- |A method is an algorithm for obtaining an analysis from an MF and a program.
-type Algorithm a b = MF a -> Stmt -> Analysis b
+type Algorithm a b = MF a -> Analysis b
 
 -- |Runs an Analysis analysis on a program at a certain label.
-analyse :: (MF a -> Stmt -> Analysis b) -> (Prog -> MF a) -> Prog -> Analysis b
+analyse :: Algorithm a b -> (Prog -> MF a) -> Prog -> Analysis b
 analyse alg mkMF p@(Prog d s) l
-  | S.member l (labels p) = alg (mkMF p) s l
+  | S.member l (labels p) = alg (mkMF p) l
   | otherwise             = error ("no statement with label " ++ show l)
 
 -- * Monotone Frameworks
@@ -42,20 +48,21 @@ type Transfer a = Stmt -> a -> a
 data Direction = Forwards | Backwards
 
 isForwards :: MF a -> Bool
-isForwards mf = case direction mf of Forwards -> True ; _ -> False
+isForwards mf = case getDirection mf of Forwards -> True ; _ -> False
 
 isBackwards :: MF a -> Bool
-isBackwards mf = case direction mf of Backwards -> True ; _ -> False
+isBackwards mf = case getDirection mf of Backwards -> True ; _ -> False
 
 data MF a = MF
-  { getI      :: a                          -- ^ extremal values
-  , getE      :: Set Label                  -- ^ extremal labels
-  , getF      :: Set Flow                   -- ^ control flow for analysis
-  , getIF     :: Set InterFlow              -- ^ inter-procedural flow
-  , getL      :: Lattice a                  -- ^ lattice on property space
-  , getT      :: Transfer a                 -- ^ transfer function
-  , getD      :: FTable                     -- ^ procedure declarations
-  , direction :: Direction                  -- ^ direction of the analysis
+  { getI         :: a                          -- ^ extremal values
+  , getE         :: Set Label                  -- ^ extremal labels
+  , getF         :: Set Flow                   -- ^ control flow for analysis
+  , getIF        :: Set InterFlow              -- ^ inter-procedural flow
+  , getL         :: Lattice a                  -- ^ lattice on property space
+  , getT         :: Transfer a                 -- ^ transfer function
+  , getD         :: FTable                     -- ^ procedure declarations
+  , getDirection :: Direction                  -- ^ direction of the analysis
+  , getBlocks    :: Set Stmt                   -- ^ blocks in a program
   }
   
 -- * Lattices
@@ -74,24 +81,26 @@ joinall l = foldr (join l) (bottom l)
 -- |Easily make MF's for backwards analyses.
 forwards :: Prog -> MF a -> MF a
 forwards p@(Prog _ s) mf = mf
-  { getE      = S.singleton (init s)
-  , getF      = progFlow p
-  , getIF     = progInterFlow p
-  , direction = Forwards
+  { getE         = S.singleton (init s)
+  , getF         = progFlow p
+  , getIF        = progInterFlow p
+  , getDirection = Forwards
   }
 
 -- |Easily make MF's for forwards analyses.
 backwards :: Prog -> MF a -> MF a
 backwards p@(Prog _ s) mf = mf
-  { getE      = final s
-  , getF      = progFlowR p
-  , getIF     = progInterFlowR p
-  , direction = Backwards
+  { getE         = final s
+  , getF         = progFlowR p
+  , getIF        = progInterFlowR p
+  , getDirection = Backwards
   }
   
 -- |Applies a transfer function for a nested block.
-applyT :: MF a -> Stmt -> Label -> a -> a
-applyT mf s l = getT mf (select l (blocks s))
+applyT :: MF a -> Label -> a -> a
+applyT mf l = case select l (getBlocks mf) of
+  Call _ _ _ _ -> id
+  s            -> getT mf s
   
 -- |Type for @kill@ functions of distributive MF's.
 type Kill a = Stmt -> a -> a
@@ -107,21 +116,24 @@ distributive kill gen mf = mf { getT = transfer }
     where
     killed = kill s (bottom $ getL mf)
     genned = gen s
-
--- |Easily make embellished monotone frameworks.
+    
 embelished :: Prog -> MF a -> MF a
-embelished (Prog d _) mf = mf { getD = mkFTable d }
+embelished p@(Prog d _) mf = mf
+  { getD      = mkFTable d
+  , getBlocks = blocks p 
+  }
     
 -- |Empty monotone framework.
 framework :: MF a
-framework  = MF
-  { getI      = error "uninitialized property 'I'"
-  , getE      = error "uninitialized property 'E' (apply 'backwards' or 'forwards')"
-  , getF      = error "uninitialized property 'F' (apply 'backwards' or 'forwards')"
-  , getIF     = error "uninitialized property 'IF' (apply 'backwards' or 'forwards')"
-  , getL      = error "uninitialized property 'L'"
-  , getT      = error "uninitialized property 'T'"
-  , getD      = error "uninitialized property 'D' (apply 'embelished')"
-  , direction = error "uninitialized property 'direction'"
+framework = MF
+  { getI          = error "uninitialized property 'I'"
+  , getE          = error "uninitialized property 'E' (apply 'backwards' or 'forwards')"
+  , getF          = error "uninitialized property 'F' (apply 'backwards' or 'forwards')"
+  , getIF         = error "uninitialized property 'IF' (apply 'backwards' or 'forwards')"
+  , getL          = error "uninitialized property 'L'"
+  , getT          = error "uninitialized property 'T'"
+  , getD          = error "uninitialized property 'D' (apply 'embelished')"
+  , getDirection  = error "uninitialized property 'direction'"
+  , getBlocks     = error "uninitialized property 'blocks' (apply 'embelished')"
   }
   

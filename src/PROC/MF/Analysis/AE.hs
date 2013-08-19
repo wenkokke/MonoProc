@@ -18,8 +18,8 @@ import qualified Data.Foldable as S (foldMap)
 mfAE :: Prog -> MF (Set AExpr)
 mfAE p
   = forwards p
-  $ embelished p
   $ distributive killAE genAE
+  $ embelished p
   $ framework
   { getI = S.empty
   , getL = Lattice
