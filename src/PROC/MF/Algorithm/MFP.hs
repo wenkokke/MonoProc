@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, FlexibleInstances #-}
 module PROC.MF.Algorithm.MFP where
 
 import PROC.Base
@@ -10,7 +10,7 @@ import Control.Applicative ((<$>),(<|>))
 
 import qualified Data.List as L
 
-import Debug.Trace
+import Debug.Trace (trace,traceShow)
 
 import Data.Maybe (listToMaybe,fromJust,fromMaybe)
 
@@ -23,13 +23,16 @@ import qualified Data.Foldable as S (foldMap,find)
 
 import Text.Printf (printf)
 
+trace' :: (Show a) => a -> a
+trace' x = traceShow x x
+
 -- * Maximal Fixed Point (MFP) Analysis.
 
-mfp :: Algorithm a a
-mfp mf l = mfp' mf l `runContext` []
+mfp :: (Show a) => Algorithm a a
+mfp mf l = mfp' mf l `at` []
 
 -- |MFP computes the maximal fixpoint for an MF.
-mfp' :: Algorithm a (Context CallStack a)
+mfp' :: (Show a) => Algorithm a (Context CallStack a)
 mfp' mf | isForwards  mf = mfpO mf
         | isBackwards mf = mfpI mf
   where
@@ -40,51 +43,102 @@ mfp' mf | isForwards  mf = mfpO mf
 type WorkList = [Flow]
 
 -- |Compute the maximal fixed point for an MF.
-fixMFP :: MF a -> WorkList -> Analysis (Context CallStack a) -> Analysis (Context CallStack a)
-fixMFP mf [] mfp = mfp
-fixMFP mf (Inter a b : ws) mfp
-  | isEntry   = fixMFP mf ws' mfpC
-  | otherwise = fixMFP mf ws' mfpR
-  where
-    -- 1: find the call/return statement for (a;b)
-    call = (True ,) <$> findCall mf a
-    retn = (False,) <$> findRetn mf b
-    (isEntry,stmt) = fromJust $ call <|> retn
-    (c,r,n,vals) = callToTuple stmt
-    args = getArgs mf stmt
-    
-    -- 3: compute analysis for entry (used only when a == c and b == n)
-    mfpC k = do
-      let (c,n) = (a,b)    
-      if k == c
-        then applyT1' mf c (enter mf c args $ mfp c)
-        else mfp k
-    
-    -- 4: compute analysis for exit (used only when a == x and b == r)
-    mfpR k = do
-      let (x,r) = (a,b)
-      if k == r
-        then applyT2' mf c (mfp c) (exit mf c args $ mfp x)
-        else mfp k
-    
-    -- 5: compute new worklist
-    ws' = filter (`flowsFrom` b) (mkWorkList mf) ++ ws
+fixMFP :: (Show a) => MF a -> WorkList -> Analysis (Context CallStack a) -> Analysis (Context CallStack a)
+fixMFP mf [    ] mfp = mfp
+fixMFP mf (w:ws) mfp = let
 
-fixMFP mf (Intra a b : ws) mfp
-  | mfpA <: mfpB = fixMFP mf ws' mfp'
-  | otherwise    = fixMFP mf ws mfp
-  where
-    -- data: new analysis for l, old analysis for l'
-    mfpA  = applyT' mf a (mfp a)
-    mfpB  = mfp b
-      
-    -- recursive case: new worklist and intermediate result
-    ws'    = filter (`flowsFrom` b) (mkWorkList mf) ++ ws
-    mfp' k = if k == b then mfpA \/ mfpB else mfp k
+  -- import: refines as (<:) and join as (\/)
+  x <: y = refines (getL' mf) x y
+  x \/ y = join (getL' mf) x y
+
+  in case w of
+  
+    -- intraprocedural analysis:
+    Intra a b -> let
     
-    -- import: refines as (<:) and join as (\/)
-    x <: y = refines (getL' mf) x y
-    x \/ y = join (getL' mf) x y
+      -- data: new analysis at l, old analysis at l'
+      mfpA  = applyT' mf a (mfp a)
+      mfpB  = mfp b
+    
+      -- recursive case: compute new worklist and analysis
+      mfp' k = if k == b then mfpA \/ mfpB else mfp k
+      ws'    = filter (`flowsFrom` b) (mkWorkList mf) ++ ws
+    
+      in if mfpA <: mfpB
+            then fixMFP mf ws' mfp'
+            else fixMFP mf ws  mfp
+            
+    -- interprocedural analysis:
+    Inter a b -> let
+    
+      -- data: find the call or retn flow in question
+      (isCall,c,r,n,vals) = findCallOrRetn mf a b
+      
+      -- data: find the args passed to the procedure call
+      args = getArgs mf n vals
+      
+      -- recursive case: compute new worklist and analysis
+      ws' = filter (`flowsFrom` b) (mkWorkList mf) ++ ws
+      
+      in if isCall
+          then let -- for call flow, do:
+      
+            -- 1. get whatever is the current analysis at the call/entry-site
+            mfpC1 = mfp a -- note: a == c
+            mfpN  = mfp b -- note: b == n
+            
+            -- 2. move all of the call analysis one place deeper into the call stack
+            mfpC2 = Context { used = used', at = at' }
+              where
+              used'      = map (c:) (used mfpC1)
+              at' [    ] = bottom (getL mf)
+              at' (x:xs)
+                | x /= c = bottom (getL mf)
+                | x == c = mfpC1 `at` xs
+            
+            -- 3. filter out the arguments/return by assignments
+            mfpC3 = foldr (<$>) mfpC2 (unassign_return : assign_args)
+              where
+              assign_args = map (getT mf . uncurry assign) args
+              unassign_return = getT mf $ assign "return" ANull
+          
+            -- 4. store the join of both analyses as the new analysis at n
+            mfp' k = if k == b then mfpC3 \/ mfpN else mfp k
+          
+          in fixMFP mf ws' mfp'
+          else let -- for retn flow, do:
+          
+            -- 1. get whatever is the current analysis at the call/exit/retn-site
+            mfpC  = mfp c
+            mfpX1 = mfp a -- note: a == x
+            mfpR  = mfp b -- note: b == r
+              
+            -- 3. filter out the arguments/return by assignments
+            mfpX2 = foldr (<$>) mfpX1 unassign_args
+              where
+              unassign_args = map (getT mf . flip assign ANull) (map fst args)
+            
+            -- 2. move all of the exit analysis one place up in the call stack
+            mfpX3 = Context { used = used', at = at' }
+              where
+              used'  = used mfpC `L.union` map tail (used mfpX2)
+              at' xs = mfpC `at` xs \/ (mfpX2 `at` (c : xs))
+              
+              -- note: import due to usage of regular join above
+              x \/ y = join (getL mf) x y
+              
+            -- 4. store the join of both analyses as the new analysis at n
+            mfp' k = if k == b then mfpX3 \/ mfpR else mfp k
+          
+          in fixMFP mf ws' mfp'
+
+  
+-- |Computes a list of name/value pairs for a procedure call based upon
+--  the call-site information for this call.
+getArgs :: MF a -> Name -> [AExpr] -> [(Name,AExpr)]
+getArgs mf n vals = case M.lookup n (getD mf) of
+  Just (Decl _ names _) -> zip names vals
+  Nothing               -> error ("undefined function \"" ++ show n ++ "\"")
 
 -- |Initial worklist of the mfp algorithm.
 mkWorkList :: MF a -> WorkList
@@ -99,58 +153,48 @@ mkAnalysis mf l
 type CallStack = [Label]
 
 data Context c a = Context
-  { getContext :: [c]
-  , runContext :: c -> a
+  { used :: [c]
+  , at   :: c -> a
   }
-  
-k_callstacks :: Int -> Prog -> [CallStack]
-k_callstacks k p = k_sample k (calllabels p) where
-  
-  calllabels :: Prog -> [Label]
-  calllabels = map (\(Call c _ _ _) -> c) . filter isCall . S.toList . blocks
-    
-  k_sample :: Int -> [a] -> [[a]]
-  k_sample 0 _  = [[]]
-  k_sample k xs = tr xs (k_sample (k - 1) xs) where
-    tr :: [a] -> [[a]] -> [[a]]
-    tr list acc = [ x : xs | x <- list, xs <- acc ]
 
 instance (Show c, Show a) => Show (Context c a) where
-  show c = "{\n"
-        ++ (unlines $ map (\k -> printf ", %s -> %s" (show k) (show $ c `runContext` k)) (getContext c))
-        ++ "}"
+  show cxt = printf "{ %s}" show''
+    where
+    show''  = unlines $ L.intersperse ", " $ map show' $ used cxt
+    show' c = printf "%s -> %s" (show c) (show $ cxt `at` c)
   
 instance Functor (Context c) where
-  fmap f c = c { runContext = f . runContext c }
-  
+  fmap f c = c { at = f . at c }
+
+
 -- |Lifts a lattice on a property space to a lattice on a
 --  context-sensitive property space.
-getL' :: MF a -> Lattice (Context CallStack a) -- or: (Eq c) => MF a -> Lattice (Context c a)
-getL' mf = Lattice
-  { join    = joinContext
-  , refines = refinesContext
-  , bottom  = bottomContext
-  }
+getL' :: (Eq c) => MF a -> Lattice (Context c a)
+getL' mf = Lattice { join = join', refines = refines', bottom  = bottom' }
   where
-  joinContext c1 c2 = Context
-    { getContext = getContext c1 `L.union` getContext c2
-    , runContext = \c -> join (getL mf) (c1 `runContext` c) (c2 `runContext` c)
-    }
-  refinesContext c1 c2 = L.any refinesAt allContexts
-    where
-    allContexts = getContext c1 `L.union` getContext c2
-    refinesAt c = refines (getL mf) (c1 `runContext` c) (c2 `runContext` c)
-  bottomContext = Context
-    { getContext = []
-    , runContext = const . bottom . getL $ mf
-    }
+  -- join: combine all used contexts, join pointwise
+  join' c1 c2
+    = Context { used = union_used c1 c2 , at   = pointwise join c1 c2 }
+    
+  -- refines: check if c1 refines c2 over all used contexts
+  refines' c1 c2
+    = L.any (pointwise refines c1 c2) (union_used c1 c2)
+  
+  -- bottom: without used contexts, always return bottom
+  bottom'
+    = Context { used = [] , at = const (bottom (getL mf)) }
+    
+  -- utils: applies a lattice operation pointwise, unions the used contexts
+  pointwise f c1 c2 c = f (getL mf) (c1 `at` c) (c2 `at` c)
+  union_used  c1 c2   = used c1 `L.union` used c2
+
 
 -- |Computes the extremal value of an MF based on the callstack
 --  in the context.
 getI' :: MF a -> Context CallStack a
 getI' mf = Context
-  { getContext = [[]]
-  , runContext = \c -> case c of
+  { used = [[]]
+  , at = \c -> case c of
       [] -> getI mf
       cs -> bottom (getL mf)
   }
@@ -163,44 +207,15 @@ getT' mf s                ca = getT mf s <$> ca
 -- |Applies the lifted transfer function that works pointwise.
 applyT' :: MF a -> Label -> Context c a -> Context c a
 applyT' mf l ca = applyT mf l <$> ca
-
--- |Transfer function for entering a procedure.
-enter :: MF a -> Label -> [(Name,AExpr)] -> Context CallStack a -> Context CallStack a
-enter mf c args ca = result
-  where
-  result    = foldr (<$>) ca (unassign : assigns)
-  assigns   = map (getT mf . uncurry assign) args
-  unassign  = getT mf $ assign "return" ANull
-
--- |Transfer function for leaving a procedure.
-exit :: MF a -> Label -> [(Name,AExpr)] -> Context CallStack a -> Context CallStack a
-exit mf c args ca = result
-  where
-  result    = foldr (<$>) ca unassigns
-  unassigns = map (getT mf . flip assign ANull) (map fst args)
-
--- |Computes information upto a function call.
-applyT1' :: MF a -> Label -> Context CallStack a -> Context CallStack a
-applyT1' mf l c = c { runContext = runContext' }
-  where
-  runContext' cs
-    | null cs || head cs /= l = bottom (getL mf)
-    | otherwise               = c `runContext` (tail cs)
   
--- |Combines information at function returns.
-applyT2' :: MF a -> Label -> Context CallStack a -> Context CallStack a -> Context CallStack a
-applyT2' mf l c1 c2 = Context
-  { getContext = getContext c1 `L.union` getContext c2
-  , runContext = \cs -> runContext c1 cs \/ runContext c2 (l : cs)
-  }
+-- |Finds either a call or a return statement with a specific label.
+findCallOrRetn :: MF a -> Label -> Label -> (Bool,Label,Label,Name,[AExpr])
+findCallOrRetn mf a b = case call <|> retn of
+  Just (isCall, Call c r n vals) -> (isCall,c,r,n,vals)
+  Nothing -> error ("could not find a call statement associated with "++show a++" or "++show b)
   where
-  (\/) = join (getL mf)
-  
--- |Find argument names and pair with argument values.
-getArgs :: MF a -> Stmt -> [(Name,AExpr)]
-getArgs mf (Call _ _ n vals) = case M.lookup n (getD mf) of
-  Just (Decl _ names _) -> zip names vals
-  Nothing              -> error ("undefined function \"" ++ show n ++ "\"")
+  call = (True ,) <$> findCall mf a
+  retn = (False,) <$> findRetn mf b
 
 -- |Finds a call statement with a specific call label.
 findCall :: MF a -> Label -> Maybe Stmt
@@ -219,7 +234,3 @@ findRetn mf r = listToMaybe filtered
   filtered = filter isRetn blocks
   isRetn (Call _ r' _ _) = r == r'
   isRetn _ = False
-  
--- |Converts a call statement into a tuple of values.
-callToTuple :: Stmt -> (Label,Label,Name,[AExpr])
-callToTuple (Call c r n vals) = (c,r,n,vals)

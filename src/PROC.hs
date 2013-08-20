@@ -29,13 +29,14 @@ ex1 = mkProg
   ]
 
 ex2 = mkProg
-  [ "x = 10;"
-  , "y = 100;"
-  , "add(a,b) {"
+  [ "add(a,b) {"
   , "  a = a + (x + y);"
   , "  return a + b;"
   , "}"
-  , "add(3,5);"
+  , " "
+  , "x = 10;"
+  , "y = x + 10;"
+  , "z = add(y,y + y);"
   ]
 
 ex3 = mkProg
