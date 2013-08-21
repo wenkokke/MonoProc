@@ -1,13 +1,10 @@
-module PROC.MF.Algorithm.MOP (mop,mopk,vkpaths) where
+module PROC.MF.Algorithm.MOP (mop,mopk) where
 
 import PROC.Base
 import PROC.MF.Flowable
 import PROC.MF.Analysis
 
-import Debug.Trace (traceShow)
-
 import Data.Maybe (mapMaybe)
-import Data.Set (Set,(\\))
 import qualified Data.Set as S
 import qualified Data.List as L (init)
 
@@ -25,6 +22,13 @@ mop = mopk maxBound
 --  safe side when presented with a looping or recursive program. This is because some
 --  critical paths may not be generated with a low enough value for @k@. It's use for
 --  the analysis of these programs should therefore be dissuaded.
+--
+--  TODO: MOP does not play entirely nice with procedure calls. It does not interpret
+--  procedure entries as assignments to parameters, and does not interpret procedure
+--  exits as null assignments to these parameters (nor does it restore from the call-site).
+--  The reason I have not yet implemented this is because this will require some serious
+--  modification to the valid k-paths function @vkpaths@, in order to mark procedure entries
+--  and exits. I guess this is where deciding not to give them labels comes back to bite me.
 mopk :: Int -> Algorithm a a
 mopk k mf l
   | k < 2     = error "mopk: k should be a large integer >= 3"

@@ -6,13 +6,12 @@ import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Flowable
 
-import Debug.Trace
-
-import Control.Applicative ((<$>))
 import Data.Monoid ((<>))
+
 import Data.Set (Set,(\\))
 import qualified Data.Set as S
-import qualified Data.Foldable as S (foldMap)
+import qualified Data.Map as M
+
 import Text.Printf (printf)
 
 -- |Runs an Analysis analysis on a program and prints the result to stdout.
@@ -73,6 +72,7 @@ data Lattice a = Lattice
   , bottom  :: a
   }
 
+-- |Joins a list of values.
 joinall :: Lattice a -> [a] -> a
 joinall l = foldr (join l) (bottom l)
 
@@ -95,10 +95,6 @@ backwards p@(Prog _ s) mf = mf
   , getIF        = progInterFlowR p
   , getDirection = Backwards
   }
-
--- |Applies a transfer function for a nested block.
-applyT :: MF a -> Label -> a -> a
-applyT mf l = getT mf (select l (getBlocks mf))
 
 -- |Type for @kill@ functions of distributive MF's.
 type Kill a = Stmt -> a -> a
@@ -134,3 +130,15 @@ framework = MF
   , getDirection  = error "uninitialized property 'direction'"
   , getBlocks     = error "uninitialized property 'blocks' (apply 'embelished')"
   }
+
+-- |Computes a list of name/value pairs for a procedure call based upon
+--  the call-site information for this call.
+getArgs :: MF a -> Name -> [AExpr] -> [(Name,AExpr)]
+getArgs mf n vals = case M.lookup n (getD mf) of
+  Just (Decl _ names _) -> zip names vals
+  Nothing               -> error ("undefined function \"" ++ show n ++ "\"")
+
+-- |Applies a transfer function for a nested block.
+applyT :: MF a -> Label -> a -> a
+applyT mf l = getT mf (select l (getBlocks mf))
+

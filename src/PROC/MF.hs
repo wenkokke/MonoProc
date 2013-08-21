@@ -11,7 +11,6 @@ module PROC.MF
   , module PROC.MF.Analysis.CP
   ) where
 
-import PROC.Base
 import PROC.MF.Labelable
 import PROC.MF.Flowable
 import PROC.MF.Algorithm.MOP  -- meet over all paths
