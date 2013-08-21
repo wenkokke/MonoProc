@@ -3,13 +3,10 @@ module PROC.MF.Analysis.VB (mfVB) where
 import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Analysis
-import PROC.MF.Flowable
 import PROC.MF.Available
 import PROC.MF.FreeNames
 
-import Text.Printf (printf)
-import Data.Monoid ((<>))
-import Data.Set (Set,(\\))
+import Data.Set (Set)
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 

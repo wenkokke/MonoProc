@@ -5,19 +5,11 @@ module PROC.MF.Analysis.RD (mfRD,RD (..)) where
 import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Analysis
-import PROC.MF.Flowable
 import PROC.MF.FreeNames
 
 import Text.Printf (printf)
-import Data.Monoid ((<>))
-import Data.Set (Set,(\\))
+import Data.Set (Set)
 import qualified Data.Set as S
-import qualified Data.Foldable as S (foldMap)
-
-import Text.ParserCombinators.UU ((<$),(<$>),(<|>),pListSep)
-import Text.ParserCombinators.UU.BasicInstances (Parser,pSym)
-import Text.ParserCombinators.UU.Idioms (iI,Ii (..))
-import Text.ParserCombinators.UU.Utils (runParser,pComma,pNatural,pBraces)
 
 -- * Monotone Framework Instance
 

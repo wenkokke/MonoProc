@@ -13,7 +13,6 @@ import PROC.Parsing
 import PROC.Evaluating
 import PROC.MF
 import qualified Data.Map as M
-import Text.ParserCombinators.UU.Utils (runParser)
 
 mkProg :: [String] -> Prog
 mkProg = parseProg . unlines

@@ -99,10 +99,7 @@ fixMFP k mf (w:ws) mfp = let
                 | x == c = mfpC1 `at` xs
 
             -- 3. filter out the arguments/return by assignments
-            mfpC3 = foldr (<$>) mfpC2 (unassign_return : assign_args)
-              where
-              assign_args = map (getT mf . uncurry assign) args
-              unassign_return = getT mf $ assign "return" ANull
+            mfpC3 = procEntry mf args mfpC2
 
             -- 4. store the join of both analyses as the new analysis at n
             mfp' k = if k == b then mfpC3 \/ mfpN else mfp k
@@ -116,9 +113,7 @@ fixMFP k mf (w:ws) mfp = let
             mfpR  = mfp b -- note: b == r
 
             -- 3. filter out the arguments/return by assignments
-            mfpX2 = foldr (<$>) mfpX1 unassign_args
-              where
-              unassign_args = map (getT mf . flip assign ANull) (map fst args)
+            mfpX2 = procExit mf args mfpX1
 
             -- 2. move all of the exit analysis one place up in the call stack
             mfpX3 = Context { used = used', at = at' }
@@ -143,6 +138,22 @@ mkAnalysis :: MF a -> Analysis (Context CallStack a)
 mkAnalysis mf l
   | l `S.member` getE mf = getI' mf
   | otherwise            = bottom (getL' mf)
+
+-- |Interprets a procedure exit (with a list of arguments) as assignments
+--  of @null@ to those arguments.
+procExit :: MF a -> [(Name,AExpr)] -> Context c a -> Context c a
+procExit mf args mfpX = foldr (<$>) mfpX unassign_args
+  where
+  unassign_args = map (getT mf . flip assign ANull) (map fst args)
+
+-- |Interprets a procedure entry (with a list of arguments) as assignments
+--  of the given values to those arguments, and an assignment to @null@ to
+--  the special @return@ value.
+procEntry :: MF a -> [(Name,AExpr)] -> Context c a -> Context c a
+procEntry mf args mfpC = foldr (<$>) mfpC (unassign_return : assign_args)
+  where
+  assign_args = map (getT mf . uncurry assign) args
+  unassign_return = getT mf $ assign "return" ANull
 
   
 -- * Contexts

@@ -3,14 +3,10 @@ module PROC.MF.Analysis.AE (mfAE) where
 import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Analysis
-import PROC.MF.Flowable
 import PROC.MF.Available
 import PROC.MF.FreeNames
 
-import Debug.Trace (trace)
-
-import Data.Monoid ((<>))
-import Data.Set (Set,(\\))
+import Data.Set (Set)
 import qualified Data.Set as S
 import qualified Data.Foldable as S (foldMap)
 

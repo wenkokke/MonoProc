@@ -3,20 +3,14 @@ module PROC.MF.Analysis.CP (mfCP,CP (..),ZT (..)) where
 import Prelude hiding (init)
 import PROC.Base
 import PROC.MF.Analysis
-import PROC.MF.Flowable
 import PROC.MF.FreeNames
-import PROC.Evaluating (VTable)
-import qualified PROC.Evaluating as E (VTable,evalAE)
+import qualified PROC.Evaluating as E (evalAE)
 
-import Text.Printf (printf)
-import Data.Monoid ((<>))
 import Data.Maybe (mapMaybe)
 import Data.Map (Map)
 import qualified Data.Map as M
-import Data.Set (Set)
 import qualified Data.Set as S
-import Data.List
-import Control.Applicative (pure,(<$>),(<*>))
+import Control.Applicative ((<$>))
 
 mfCP :: Prog -> MF CP
 mfCP p

@@ -51,6 +51,22 @@ getTforPath :: MF a -> Path -> a -> a
 getTforPath mf [    ] = id
 getTforPath mf (l:ls) = getTforPath mf ls . applyT mf l
 
+-- |Interprets a procedure exit (with a list of arguments) as assignments
+--  of @null@ to those arguments.
+procExit :: MF a -> [(Name,AExpr)] -> a -> a
+procExit mf args mfpX = foldr ($) mfpX unassign_args
+  where
+  unassign_args = map (getT mf . flip assign ANull) (map fst args)
+
+-- |Interprets a procedure entry (with a list of arguments) as assignments
+--  of the given values to those arguments, and an assignment to @null@ to
+--  the special @return@ value.
+procEntry :: MF a -> [(Name,AExpr)] -> a -> a
+procEntry mf args mfpC = foldr ($) mfpC (unassign_return : assign_args)
+  where
+  assign_args = map (getT mf . uncurry assign) args
+  unassign_return = getT mf $ assign "return" ANull
+
 -- |A path is an ordered list of visited program labels.
 type Path = [Label]
 

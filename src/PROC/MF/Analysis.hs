@@ -131,14 +131,14 @@ framework = MF
   , getBlocks     = error "uninitialized property 'blocks' (apply 'embelished')"
   }
 
+-- |Applies a transfer function for a nested block.
+applyT :: MF a -> Label -> a -> a
+applyT mf l = getT mf (select l (getBlocks mf))
+
 -- |Computes a list of name/value pairs for a procedure call based upon
 --  the call-site information for this call.
 getArgs :: MF a -> Name -> [AExpr] -> [(Name,AExpr)]
 getArgs mf n vals = case M.lookup n (getD mf) of
   Just (Decl _ names _) -> zip names vals
   Nothing               -> error ("undefined function \"" ++ show n ++ "\"")
-
--- |Applies a transfer function for a nested block.
-applyT :: MF a -> Label -> a -> a
-applyT mf l = getT mf (select l (getBlocks mf))
 
