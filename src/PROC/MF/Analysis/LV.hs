@@ -32,8 +32,10 @@ killLV :: Stmt -> Set Name -> Set Name
 killLV (Assign _ x _) _ = S.singleton x
 killLV (Skip _)       _ = S.empty
 killLV (BExpr _ b)    _ = S.empty
+killLV (Call _ _ _ _) _ = S.empty
 
 genLV :: Stmt -> Set Name
 genLV (Assign _ _ a)  = freeNames a
 genLV (Skip _)        = S.empty
 genLV (BExpr _ b)     = freeNames b
+genLV (Call _ _ _ as) = S.foldMap freeNames as

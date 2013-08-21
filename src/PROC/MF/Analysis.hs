@@ -22,7 +22,7 @@ analyseAndPrint = ((putStrLn . ) . ) . analyseAndShow
 -- |Runs an Analysis analysis on a program and shows the result.
 analyseAndShow :: (Show b) => Algorithm a b -> (Prog -> MF a) -> Prog -> String
 analyseAndShow alg mf p = showAnalysis (S.toList $ labels p) (analyse alg mf p)
-      
+
 -- |Show instances of Analysis--which are functions--for a limited
 --  number of inputs.
 showAnalysis :: (Show a) => [Label] -> Analysis a -> String
@@ -41,7 +41,7 @@ analyse alg mkMF p@(Prog d s) l
   | otherwise             = error ("no statement with label " ++ show l)
 
 -- * Monotone Frameworks
-  
+
 -- |Type for transfer functions in an MF.
 type Transfer a = Stmt -> a -> a
 
@@ -64,7 +64,7 @@ data MF a = MF
   , getDirection :: Direction                  -- ^ direction of the analysis
   , getBlocks    :: Set Stmt                   -- ^ blocks in a program
   }
-  
+
 -- * Lattices
 
 data Lattice a = Lattice
@@ -72,7 +72,7 @@ data Lattice a = Lattice
   , refines :: a -> a -> Bool
   , bottom  :: a
   }
-  
+
 joinall :: Lattice a -> [a] -> a
 joinall l = foldr (join l) (bottom l)
 
@@ -95,19 +95,17 @@ backwards p@(Prog _ s) mf = mf
   , getIF        = progInterFlowR p
   , getDirection = Backwards
   }
-  
+
 -- |Applies a transfer function for a nested block.
 applyT :: MF a -> Label -> a -> a
-applyT mf l = case select l (getBlocks mf) of
-  Call _ _ _ _ -> id
-  s            -> getT mf s
-  
+applyT mf l = getT mf (select l (getBlocks mf))
+
 -- |Type for @kill@ functions of distributive MF's.
 type Kill a = Stmt -> a -> a
 
 -- |Type for @gen@ functions of distributive MF's.
 type Gen a = Stmt -> a
-  
+
 -- |Easily make distributive monotone frameworks.
 distributive :: (Ord a) => Kill (Set a) -> Gen (Set a) -> MF (Set a) -> MF (Set a)
 distributive kill gen mf = mf { getT = transfer }
@@ -116,13 +114,13 @@ distributive kill gen mf = mf { getT = transfer }
     where
     killed = kill s (bottom $ getL mf)
     genned = gen s
-    
+
 embelished :: Prog -> MF a -> MF a
 embelished p@(Prog d _) mf = mf
   { getD      = mkFTable d
-  , getBlocks = blocks p 
+  , getBlocks = blocks p
   }
-    
+
 -- |Empty monotone framework.
 framework :: MF a
 framework = MF
@@ -136,4 +134,3 @@ framework = MF
   , getDirection  = error "uninitialized property 'direction'"
   , getBlocks     = error "uninitialized property 'blocks' (apply 'embelished')"
   }
-  

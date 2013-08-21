@@ -31,11 +31,13 @@ mfVB p
   }
 
 killVB :: Stmt -> Set AExpr -> Set AExpr
-killVB (Assign _ x _) bot = S.filter (x `isFreeIn`) bot
-killVB (Skip _)        _  = S.empty
-killVB (BExpr _ _)     _  = S.empty
+killVB (Assign _ x _)  bot = S.filter (x `isFreeIn`) bot
+killVB (Skip _)         _  = S.empty
+killVB (BExpr _ _)      _  = S.empty
+killVB (Call _ _ _ _)   _  = S.empty
 
 genVB :: Stmt -> Set AExpr
-genVB (Assign _ _ a) = available a
-genVB (Skip _)       = S.empty
-genVB (BExpr _ b)    = available b
+genVB (Assign _ _ a)  = available a
+genVB (Skip _)        = S.empty
+genVB (BExpr _ b)     = available b
+genVB (Call _ _ _ as) = S.foldMap available as

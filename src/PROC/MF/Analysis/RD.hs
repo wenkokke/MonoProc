@@ -44,11 +44,13 @@ killRD :: Stmt -> Set RD -> Set RD
 killRD (Assign _ x _) bot = S.insert (RD x Nothing) (S.filter (\(RD x' _) -> x == x') bot)
 killRD (Skip _)        _  = S.empty
 killRD (BExpr _ _)     _  = S.empty
+killRD (Call _ _ _ _)  _  = S.empty
 
 genRD :: Stmt -> Set RD
-genRD (Assign l x _)  = S.singleton (RD x (Just l))
-genRD (Skip _)        = S.empty
-genRD (BExpr _ _)     = S.empty
+genRD (Assign l x _) = S.singleton (RD x (Just l))
+genRD (Skip _)       = S.empty
+genRD (BExpr _ _)    = S.empty
+genRD (Call _ _ _ _) = S.empty
 
 -- * Reached-Definitions Type
 

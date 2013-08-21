@@ -109,7 +109,7 @@ fixMFP mf (w:ws) mfp = let
           else let -- for retn flow, do:
           
             -- 1. get whatever is the current analysis at the call/exit/retn-site
-            mfpC  = mfp c
+            mfpC  = applyT' mf a (mfp c)
             mfpX1 = mfp a -- note: a == x
             mfpR  = mfp b -- note: b == r
               
@@ -150,12 +150,10 @@ mkAnalysis mf l
   | l `S.member` getE mf = getI' mf
   | otherwise            = bottom (getL' mf)
 
-type CallStack = [Label]
-
-data Context c a = Context
-  { used :: [c]
-  , at   :: c -> a
-  }
+-- |A Context object contains a number of analyses for different
+--  contexts (e.g. call stacks), together with a list of the contexts
+--  that were observed during the analysis.
+data Context c a = Context { used :: [c] , at :: c -> a }
 
 instance (Show c, Show a) => Show (Context c a) where
   show cxt = printf "{ %s}" show''
@@ -165,6 +163,12 @@ instance (Show c, Show a) => Show (Context c a) where
   
 instance Functor (Context c) where
   fmap f c = c { at = f . at c }
+  
+  
+-- |A call stack is a useful kind of context, which stores the procedure
+--  calls in an analysis on a stack (with the top element being the most
+--  recent procedure call).
+type CallStack = [Label]
 
 
 -- |Lifts a lattice on a property space to a lattice on a
@@ -199,12 +203,11 @@ getI' mf = Context
       cs -> bottom (getL mf)
   }
   
--- |Computes the lifted transfer function that works pointwise.
+-- |Computes a lifted transfer function that works pointwise.
 getT' :: MF a -> Transfer (Context CallStack a)
-getT' mf s@(Call _ _ _ _) ca = ca
-getT' mf s                ca = getT mf s <$> ca
+getT' mf s ca = getT mf s <$> ca
   
--- |Applies the lifted transfer function that works pointwise.
+-- |Applies a lifted transfer function that works pointwise.
 applyT' :: MF a -> Label -> Context c a -> Context c a
 applyT' mf l ca = applyT mf l <$> ca
   

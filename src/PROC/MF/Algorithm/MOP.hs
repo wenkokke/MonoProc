@@ -20,7 +20,7 @@ mop = mopk maxBound
 -- |Performs a Meet Over all Paths where paths are limited to @k@ repetitions
 --  of the same label. MOP-k is therefore "suitable" for the analysis of looping and
 --  recursive programs, as these have an infinite number of paths.
--- 
+--
 --  Note: MOP-k is not a safe analysis algorithm, as it doesn't necessarily err on the
 --  safe side when presented with a looping or recursive program. This is because some
 --  critical paths may not be generated with a low enough value for @k@. It's use for
@@ -30,7 +30,7 @@ mopk k mf l
   | k < 2     = error "mopk: k should be a large integer >= 3"
   | otherwise = joinall (getL mf) . map ($ getI mf) $ tr
      where tr = map (getTforPath mf) (vkpaths k mf l)
-  
+
 -- |Generates all valid paths through a program with up to @k@ reperititons
 --  of the same label.
 vkpaths :: Int -> MF a -> Label -> [Path]
@@ -60,13 +60,13 @@ vkpathsO k nfs ifs acc a b
   | a == b    = [acc]
   | otherwise = vintra a b ++ vinter a b
   where
-  
+
   vintra :: Label -> Label -> [Path]
   vintra a b = do
     (c,r) <- filter (\(c,r) -> b == r && nokloop k r acc) nfs
     a2b <- vkpathsO k nfs ifs (c : acc) a c
     return a2b
-    
+
   vinter :: Label -> Label -> [Path]
   vinter a b = do
     (c,n,x,r) <- filter (\(c,_,_,r) -> b == r && nokloop k r acc) ifs
