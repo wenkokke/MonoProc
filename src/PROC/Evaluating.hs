@@ -31,32 +31,33 @@ evalStmt fs s vs = case s of
   Seq s1 s2                 -> evalStmt fs s1 vs >>= evalStmt fs s2
   Call _ _ n aes            -> case M.lookup n fs of
     Just (Decl _ xs s)      ->
-    
+
       do evaled      <- mapM (evalAE vs) aes;
          let args     = M.fromList (zip xs evaled)
          let shadowed = foldr (\x r -> maybe r (\i -> M.insert x i r) (M.lookup x vs)) M.empty xs
          let callenv  = args <> vs
          retenv      <- evalStmt fs s callenv
          return $ shadowed <> (foldr M.delete retenv xs)
-         
-    Nothing                 -> throwError ("unknown function '"++n++"'")
-    
+
+    Nothing                 -> throwError ("eval: unknown function '"++n++"'")
+
 evalBE :: VTable -> BExpr -> PROC Bool
 evalBE vs b = case b of
   BConst e1 -> pure e1
-  Lt  e1 e2 -> (<)  <$> evalAE vs e1 <*> evalAE vs e2
+  Lt  e1 e2 -> (<) <$> evalAE vs e1 <*> evalAE vs e2
   Lte e1 e2 -> (<=) <$> evalAE vs e1 <*> evalAE vs e2
-  Gt  e1 e2 -> (>)  <$> evalAE vs e1 <*> evalAE vs e2
+  Gt  e1 e2 -> (>) <$> evalAE vs e1 <*> evalAE vs e2
   Gte e1 e2 -> (>=) <$> evalAE vs e1 <*> evalAE vs e2
   Eq  e1 e2 -> (==) <$> evalAE vs e1 <*> evalAE vs e2
   Neq e1 e2 -> (/=) <$> evalAE vs e1 <*> evalAE vs e2
-  Not e1    -> not  <$> evalBE vs e1
+  Not e1    ->  not  <$> evalBE vs e1
 
 evalAE :: VTable -> AExpr -> PROC Integer
 evalAE vs a = case a of
+  ANull     -> throwError ("eval: encountered null")
   AName n   -> case M.lookup n vs of
                   Just i  -> pure i
-                  Nothing -> throwError ("unbound variable '"++n++"'")
+                  Nothing -> throwError ("eval: unbound variable '"++n++"'")
   AConst i  -> pure i
   Add e1 e2 -> (+) <$> evalAE vs e1 <*> evalAE vs e2
   Sub e1 e2 -> (-) <$> evalAE vs e1 <*> evalAE vs e2

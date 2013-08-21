@@ -35,7 +35,7 @@ mfCP p
 -- |Representation of (Var* -> (Z+T))+F
 data CP = CP (Map Name ZT) | Bottom
   deriving (Eq)
-  
+
 instance Show CP where
   show Bottom = "Bottom"
   show (CP m) = show m
@@ -43,11 +43,11 @@ instance Show CP where
 -- |Representation of Z+T.
 data ZT = Z Integer | Top
   deriving (Eq)
-  
+
 instance Show ZT where
   show (Z i) = show i
   show  Top  = "T"
-  
+
 fromZ :: ZT -> Integer
 fromZ (Z i) = i
 
@@ -67,7 +67,7 @@ refinesCP  Bottom  _      = True
 refinesCP (CP s1) (CP s2) = all (\z -> M.lookup z s1 `refinesMZT` M.lookup z s2) keys
   where
   keys = S.toList $ S.union (M.keysSet s1) (M.keysSet s2)
-  
+
 -- |Refining predicate of maybe Z+T.
 refinesMZT :: Maybe ZT -> Maybe ZT -> Bool
 refinesMZT  Nothing   _        = False
@@ -90,18 +90,18 @@ joinCP (CP s1) (CP s2) = CP $ S.fold (\x -> insert x $ f1 x `joinMZT` f2 x) M.em
   f1 x = M.lookup x s1
   f2 x = M.lookup x s2
   keys = S.union (M.keysSet s1) (M.keysSet s2)
-  
+
 -- |Least upper bound of maybe Z+T.
 joinMZT :: Maybe ZT -> Maybe ZT -> Maybe ZT
 joinMZT  Nothing   z2       = z2
 joinMZT  z1        Nothing  = z1
 joinMZT (Just z1) (Just z2) = Just (z1 `joinZT` z2)
-  
+
 -- |Least upper bound of Z+T.
 joinZT :: ZT -> ZT -> ZT
 joinZT  z1     Top   = z1
 joinZT  Top    z2    = z2
-joinZT (Z z1) (Z z2) | z1 == z2  = Z z1 
+joinZT (Z z1) (Z z2) | z1 == z2  = Z z1
                      | otherwise = Top
 
 transferCP :: Transfer CP
@@ -115,6 +115,7 @@ transferCP s m = case s of
                                   (Just z1, Just z2) -> M.insert x (z1 `joinZT` z2) m
   (Skip _)       -> m
   (BExpr _ _)    -> m
+  (Call _ _ _ _) -> m
   (other)        -> error (show other)
 
 evalAE :: Map Name ZT -> AExpr -> Maybe ZT
@@ -126,4 +127,3 @@ evalAE m a | anyTop    = Just Top
   safeCP  = fromZ <$> m
   anyTop  = any isTop allCPs
   allCPs  = mapMaybe (\x -> M.lookup x m) (S.toList $ freeNames a)
-  
