@@ -14,9 +14,9 @@ Syntax
 A program in MonoProc consists of a number of statements and a number of
 procedure declarations. These are allowed to occur in any order.
 Statement declarations have the following form, with their usual
-interpretations.[^1]
+interpretations.
 
-~~~~ {.sourceCode .literate .haskell}
+~~~~
   Stmt
     ::= "skip" ";"
       | Name "=" AExpr ";"          -- assignment
@@ -31,14 +31,14 @@ of syntactic suger.
 
 The syntactic construct
 
-~~~~ {.sourceCode .literate .haskell}
+~~~~
       | "return" Name ";"
 ~~~~
 
 is transformed to an assignment to a special variable called **return**,
 and
 
-~~~~ {.sourceCode .literate .haskell}
+~~~~
       | Name "=" Name "(" AExpr* ")" ";"
 ~~~~
 
@@ -47,7 +47,7 @@ is transformed to a call statement, followed by an assignment of the
 
 Furthermore, **AExpr**s and **BExpr**s have the following form.
 
-~~~~ {.sourceCode .literate .haskell}
+~~~~
   AExpr
     ::= Name            -- variable
       | Integer         -- primitive integer
@@ -58,7 +58,7 @@ Furthermore, **AExpr**s and **BExpr**s have the following form.
       | AExpr "/" AExpr
 ~~~~
 
-~~~~ {.sourceCode .literate .haskell}
+~~~~
   BExpr
     ::= "true"
       | "false"
@@ -77,7 +77,7 @@ used to model function entry and exit in the analyses.
 
 Finally, procedure declaclarations have the following form.
 
-~~~~ {.sourceCode .literate .haskell}
+~~~~
   Decl
     ::= Name "(" Name* ")" Block
 ~~~~
@@ -89,7 +89,7 @@ Semantics
 =========
 
 Semantically, the MonoProc language does not stray far from the
-\textsc{While} language as defined in (Flemming Nielson 1999, 3–5).
+WHILE-language as defined in (Flemming Nielson 1999, 3–5).
 
 A notable exception is that in MonoProc the user cannot choose the name
 for a function's return value. This does not, however, limit the
@@ -113,39 +113,39 @@ In the paragraphs below I will
 3.  discuss the deviations from (Flemming Nielson 1999) in my
     implementation.
 
-From Nielson, Nielson and Hankin to MonoProc {#mapping}
+From Nielson, Nielson and Hankin to MonoProc
 --------------------------------------------
 
-Basic data-flow functions as described in §2.1 (*init*, *final*, *flow*,
-...) can be found in the *Flowable*[^2] module.
+Basic data-flow functions as described in §2.1 ( *init*, *final*, *flow*,
+... ) can be found in the *Flowable*[2] module.
 
-The $\mathbf{AExp}(\_)$ function can be found in the *Available* module
-as $\mathit{available}(\_)$, and is defined on any term that can contain
+The `AExp(_)` function can be found in the *Available* module
+as `available(_)`, and is defined on any term that can contain
 arithmetic expressions (including arithmetic expressions).
 
-The $\mathit{FV}(\_)$ function can be found in the *FreeNames* module as
-$\mathit{freeNames}(\_)$. As with $\mathit{available}(\_)$, it is
-defined on any term that can contain variable names.[^3]
+The `FV(_)` function can be found in the *FreeNames* module as
+`freeNames(_)`. As with `available(_)`, it is
+defined on any term that can contain variable names.[3]
 
 The definition of a monotone framework and of a lattice can be found in
 the *Analysis* module, together with some basic functions for building
 monotone frameworks---a description of which will follow below under
-[Constructing Monotone Frameworks](#construction).
+Constructing Monotone Frameworks.
 
 The analyses (available expressions, live variables, ...) are defined in
-the *Analysis* module, under their usual abbreviations (*AE*, *LV*,
-...). These will be discussed in [Analyses](#analyses).
+the *Analysis* module, under their usual abbreviations ( *AE*, *LV*,
+... ). These will be discussed in Analyses.
 
 Several versions of the *MFP* algorithm have been implemented in the
 *Algorithm.MFP* module.
 
 `mfp`:
-:   Computes a pointwise maximal fixed-point---using call strings[^4] as
+:   Computes a pointwise maximal fixed-point---using call strings[4] as
     a context---and collapses all pointwise results using the join
-    operator ($\sqcup$).
+    operator.
 `mfpk`:
-:   As *mfp*, but allows the user to provide a parameter $k$ that is
-    used to bound the length of the call strings.[^5]
+:   As *mfp*, but allows the user to provide a parameter `k` that is
+    used to bound the length of the call strings.[5]
 `mfp'`:
 :   As *mfp*, but it returns a pointwise analysis.
 `mfpk'`:
@@ -159,7 +159,7 @@ module.
 :   Computes a *meet over all (valid) paths* analysis by computing all
     valid paths, and composing the transfer functions along these paths.
 `mopk`:
-:   As *mop*, but allows the user to provide a parameter $k$ that is
+:   As *mop*, but allows the user to provide a parameter `k` that is
     used to bound the lengths of the paths *by bounding the number of
     times that a path is allowed to visit a single program point.*
 
@@ -167,12 +167,12 @@ module.
 looping programs. In my implementation, however, *MOP* is guaranteed to
 terminate on all programs, but is not guaranteed to return correct
 results. More precisely, with recursive calls and loops *mopk* will
-examine at most $k$ recursive calls or iterations. In general this is
+examine at most `k` recursive calls or iterations. In general this is
 not a safe extension, but for practical purposes it suffices. As *mop*
 is internally based on *mopk*, this loss of guarantee of correctness
 also affects my implementation of *mop*.
 
-Constructing Monotone Frameworks {#construction}
+Constructing Monotone Frameworks
 --------------------------------
 
 Below I will discuss the functions that can be used to construct
@@ -189,7 +189,7 @@ instances of monotone frameworks, in order of relevance.
     the blocks in the program.
 `distributive`:
 :   Allows for an easy definition of the transfer functions of
-    distributive analyses that return sets (*AE*, *LV*, ...). It defines
+    distributive analyses that return sets ( *AE*, *LV*, ... ). It defines
     the transfer function in terms of a *kill* and a *gen* function (see
     Flemming Nielson 1999, fig. 2.6).
 `forwards`, `backwards`:
@@ -200,7 +200,7 @@ instances of monotone frameworks, in order of relevance.
 See below for a concrete definition of an instance, taken from
 *Analysis.AE*.
 
-~~~~ {.sourceCode .literate .haskell}
+~~~~
 mfAE :: Prog -> MF (Set AExpr)
 mfAE p
   = forwards p
@@ -216,7 +216,7 @@ mfAE p
   }
 ~~~~
 
-The final type of the "instance" is $\mathit{Prog} \to \mathit{MF}$, and
+The final type of the "instance" is `Prog -> MF`, and
 it will in fact only compute the actual instance upon application to a
 program. This is internalized in the `analyse` functions, however, and
 therefore the user will rarely have to do this.
@@ -230,7 +230,7 @@ discussed below.
 
 ### Limiting MOP to MOP-k
 
-This has been discussed [above](#mapping), and is only restated here for
+This has been discussed above, and is only restated here for
 completeness.
 
 ### Procedure Entry and Exit Label
@@ -267,9 +267,9 @@ Live Variables (LV):
     that are never used.
 
 Very Busy Expressions (VB):
-:   Very Busy Expression analysis computes, for every program point $p$,
-    which expressions are guaranteed to be used in all paths from $p$ up
-    to the next assignment to any variable used in $p$.
+:   Very Busy Expression analysis computes, for every program point `p`,
+    which expressions are guaranteed to be used in all paths from `p` up
+    to the next assignment to any variable used in `p`.
 
     This is useful for, for instance, eager evaluation of very busy
     expressions.
@@ -299,28 +299,28 @@ Program Analysis*. Springer-Verlag.
 Hage, Jurriaan. 2013. “Automatic Program Analysis.” University Lecture.
 <http://www.cs.uu.nl/docs/vakken/apa>.
 
-[^1]: While **BExpr** are syntactically not considered statements in
+[1]: While **BExpr** are syntactically not considered statements in
     their own right, they are allowed under the **Stmt** constructor in
     my implementation as it greatly simplifies the implementation.
 
-[^2]: All modules in this paragraph can be found in the *PROC.MF*
+[2]: All modules in this paragraph can be found in the *PROC.MF*
     module, which is the module containing the implementation of the
     monotone framework.
 
-[^3]: A new module, *UsedNames*, has also been implemented under
+[3]: A new module, *UsedNames*, has also been implemented under
     *PROC.MF*. However, as this module is only used during
     evaluation---and not analysis---this does not seem an appropriate
     time to discuss it.
 
-[^4]: In the implementation, call strings are referred to as call
+[4]: In the implementation, call strings are referred to as call
     *stacks*, because their implementation more closely resembles a
     stack (where the top element is the latest function call).
 
-[^5]: In the implementation, plain `mfp` calls `mfpk` using `maxBound`
-    as a value for $k$. While this is technically still a bounded
+[5]: In the implementation, plain `mfp` calls `mfpk` using `maxBound`
+    as a value for `k`. While this is technically still a bounded
     analysis in terms of call string length, `maxBound` usually
-    evaluates to around $2147483647$, which should suffice for most
+    evaluates to around 2147483647, which should suffice for most
     practical purposes. The same holds for `mop`/`mopk`; however, since
-    meeting over all paths with at most $2147483647$ repetitions of the
+    meeting over all paths with at most 2147483647 repetitions of the
     same program point can take... rather long, I'm assuming nobody will
     encounter this in practice.
