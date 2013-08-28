@@ -15,7 +15,7 @@ import Text.Printf (printf)
 
 -- * Maximal Fixed-Point (MFP) Analysis
 
--- |Performs pointwise maximal fixed-point analysis (as by @mfp'@), using call
+-- |Performs pointwise maximal fixed-point analysis (as @mfp'@), using call
 --  stacks as a context and @maxBound@ as a limit for the call stack size.
 --  After the analysis it performs a join over all the results at a label.
 mfp :: Algorithm a a
@@ -45,6 +45,7 @@ type WorkList = [Flow]
 
 -- |Compute the maximal fixed point for an MF.
 fixMFP :: Int -> MF a -> WorkList -> Analysis (Context CallStack a) -> Analysis (Context CallStack a)
+fixMFP 0 _  _      _   = error "mfpk: k should be (>=0)"
 fixMFP k mf [    ] mfp = mfp
 fixMFP k mf (w:ws) mfp = let
 
