@@ -42,30 +42,51 @@ vkpaths k mf l = concatMap (\i -> vkpaths' k intraflow interflow [l] i l) extrem
   where
   vkpaths'  | isForwards  mf = vkpathsO
             | isBackwards mf = vkpathsI
-  intraflow = mapMaybe toIntra . S.toList $ getF mf
   interflow = S.toList $ getIF mf
+  intraflow = intras ++ entries
+    where
+    intras  = mapMaybe toIntra . S.toList $ getF mf
+    entries = map (\(c,n,_,_) -> (c,n)) interflow   -- nb: we add entries to be able to
+                                                    --     paths into procedure bodies.
   extremals = S.toList $ getE  mf
+
 
 -- |Composes the transfer functions along a path.
 getTforPath :: MF a -> Path -> a -> a
 getTforPath mf [    ] = id
 getTforPath mf (l:ls) = getTforPath mf ls . applyT mf l
 
--- |Interprets a procedure exit (with a list of arguments) as assignments
---  of @null@ to those arguments.
-procExit :: MF a -> [(Name,AExpr)] -> a -> a
-procExit mf args mfpX = foldr ($) mfpX unassign_args
+-- |Applies a transfer function for a nested block, and includes tranfer
+--  into and out of procedure calls.
+--  Note: this function is different from the @applyT@ defined in the MFP module.
+applyT :: MF a -> Label -> a -> a
+applyT mf l = getT mf stmt . proc stmt
   where
-  unassign_args = map (getT mf . flip assign ANull) (map fst args)
+  stmt = select l (getBlocks mf)
+  proc (Call c r n vals)
+       | l == c = procEntry mf args
+       | l == r = procExit mf args
+       where
+       args = getArgs mf n vals
+  proc _ = id
 
 -- |Interprets a procedure entry (with a list of arguments) as assignments
 --  of the given values to those arguments, and an assignment to @null@ to
 --  the special @return@ value.
+--  Note: this function is different from the @procEntry@ defined in the MFP module.
 procEntry :: MF a -> [(Name,AExpr)] -> a -> a
 procEntry mf args mfpC = foldr ($) mfpC (unassign_return : assign_args)
   where
   assign_args = map (getT mf . uncurry assign) args
   unassign_return = getT mf $ assign "return" ANull
+
+-- |Interprets a procedure exit (with a list of arguments) as assignments
+--  of @null@ to those arguments.
+--  Note: this function is different from the @procExit@ defined in the MFP module.
+procExit :: MF a -> [(Name,AExpr)] -> a -> a
+procExit mf args mfpX = foldr ($) mfpX unassign_args
+  where
+  unassign_args = map (getT mf . flip assign ANull) (map fst args)
 
 -- |A path is an ordered list of visited program labels.
 type Path = [Label]

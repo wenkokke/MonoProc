@@ -139,8 +139,14 @@ mkAnalysis mf l
   | l `S.member` getE mf = getI' mf
   | otherwise            = bottom (getL' mf)
 
+-- |Applies a transfer function for a nested block.
+--  Note: this function is different from the @applyT@ defined in the MOP module.
+applyT :: MF a -> Label -> a -> a
+applyT mf l = getT mf (select l (getBlocks mf))
+
 -- |Interprets a procedure exit (with a list of arguments) as assignments
 --  of @null@ to those arguments.
+--  Note: this function is different from the @procExit@ defined in the MOP module.
 procExit :: MF a -> [(Name,AExpr)] -> Context c a -> Context c a
 procExit mf args mfpX = foldr (<$>) mfpX unassign_args
   where
@@ -149,6 +155,7 @@ procExit mf args mfpX = foldr (<$>) mfpX unassign_args
 -- |Interprets a procedure entry (with a list of arguments) as assignments
 --  of the given values to those arguments, and an assignment to @null@ to
 --  the special @return@ value.
+--  Note: this function is different from the @procEntry@ defined in the MOP module.
 procEntry :: MF a -> [(Name,AExpr)] -> Context c a -> Context c a
 procEntry mf args mfpC = foldr (<$>) mfpC (unassign_return : assign_args)
   where
