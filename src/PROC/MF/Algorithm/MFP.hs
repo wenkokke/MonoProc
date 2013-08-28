@@ -4,6 +4,7 @@ module PROC.MF.Algorithm.MFP (mfp,mfpk,mfp',mfpk') where
 import PROC.Base
 import PROC.MF.Flowable
 import PROC.MF.Analysis
+import PROC.MF.Algorithm
 
 import Control.Applicative ((<$>),(<|>))
 

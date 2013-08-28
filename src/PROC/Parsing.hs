@@ -55,7 +55,7 @@ pStmt = pSkip <|> pIfThen <|> pWhile <|> pCall <|> pReturn <|> pAssign <|> pCall
     where
     pElse     :: Parser Stmt
     pElse     = iI "else" pBlock Ii <<|> pure skip
-  pWhile      = iI while "while" pBExpr pBlock Ii
+  pWhile      = iI while "while" (pParens pBExpr) pBlock Ii
   pCall       = iI call pName (pParens $ pListSep pComma pAExpr) ";" Ii
   pCallAssign = iI callAssign pName "=" pCall Ii
     where

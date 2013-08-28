@@ -3,6 +3,7 @@ module PROC.MF.Algorithm.MOP (mop,mopk) where
 import PROC.Base
 import PROC.MF.Flowable
 import PROC.MF.Analysis
+import PROC.MF.Algorithm
 
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as S
