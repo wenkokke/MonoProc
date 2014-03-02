@@ -8,3 +8,5 @@
 /src/cabal-dev/packages/*.tar
 
 /src/cabal-dev/packages/*.cache
+.cabal-sandbox
+auto

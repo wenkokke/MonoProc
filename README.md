@@ -300,27 +300,27 @@ Hage, Jurriaan. 2013. “Automatic Program Analysis.” University Lecture.
 <http://www.cs.uu.nl/docs/vakken/apa>.
 
 [1]: While **BExpr** are syntactically not considered statements in
-    their own right, they are allowed under the **Stmt** constructor in
-    my implementation as it greatly simplifies the implementation.
+     their own right, they are allowed under the **Stmt** constructor in
+     my implementation as it greatly simplifies the implementation.
 
 [2]: All modules in this paragraph can be found in the *PROC.MF*
-    module, which is the module containing the implementation of the
-    monotone framework.
+     module, which is the module containing the implementation of the
+     monotone framework.
 
 [3]: A new module, *UsedNames*, has also been implemented under
-    *PROC.MF*. However, as this module is only used during
-    evaluation---and not analysis---this does not seem an appropriate
-    time to discuss it.
+     *PROC.MF*. However, as this module is only used during
+     evaluation---and not analysis---this does not seem an appropriate
+     time to discuss it.
 
 [4]: In the implementation, call strings are referred to as call
-    *stacks*, because their implementation more closely resembles a
-    stack (where the top element is the latest function call).
+     *stacks*, because their implementation more closely resembles a
+     stack (where the top element is the latest function call).
 
 [5]: In the implementation, plain `mfp` calls `mfpk` using `maxBound`
-    as a value for `k`. While this is technically still a bounded
-    analysis in terms of call string length, `maxBound` usually
-    evaluates to around 2147483647, which should suffice for most
-    practical purposes. The same holds for `mop`/`mopk`; however, since
-    meeting over all paths with at most 2147483647 repetitions of the
-    same program point can take... rather long, I'm assuming nobody will
-    encounter this in practice.
+     as a value for `k`. While this is technically still a bounded
+     analysis in terms of call string length, `maxBound` usually
+     evaluates to around 2147483647, which should suffice for most
+     practical purposes. The same holds for `mop`/`mopk`; however, since
+     meeting over all paths with at most 2147483647 repetitions of the
+     same program point can take... rather long, I'm assuming nobody will
+     encounter this in practice.
