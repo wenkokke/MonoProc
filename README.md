@@ -5,6 +5,8 @@ MonoProc
 and its relation to the framework for data-flow analysis as described in
 (Flemming Nielson 1999).*
 
+![Build Status](https://travis-ci.org/pepijnkokke/MonoProc.png)
+
 Language
 ========
 
