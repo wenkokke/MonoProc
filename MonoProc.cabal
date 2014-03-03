@@ -44,9 +44,16 @@ test-suite test-lv
                     monad-supply == 0.3.*, mtl == 2.1.*, containers >=0.4.2 && <5
   hs-source-dirs  : src test
 
-test-suite test-cp
+test-suite test-cp1
   type            : exitcode-stdio-1.0
-  main-is         : TestCP.hs
+  main-is         : TestCP1.hs
+  build-depends   : base >=4.5 && <5, uu-parsinglib == 2.8.*, uulib == 0.9.*,
+                    monad-supply == 0.3.*, mtl == 2.1.*, containers >=0.4.2 && <5
+  hs-source-dirs  : src test
+
+test-suite test-cp2
+  type            : exitcode-stdio-1.0
+  main-is         : TestCP2.hs
   build-depends   : base >=4.5 && <5, uu-parsinglib == 2.8.*, uulib == 0.9.*,
                     monad-supply == 0.3.*, mtl == 2.1.*, containers >=0.4.2 && <5
   hs-source-dirs  : src test

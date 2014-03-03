@@ -65,7 +65,7 @@ pStmt = pSkip <|> pIfThen <|> pWhile <|> pCall <|> pReturn <|> pAssign <|> pCall
 -- |Parser for block expressions.
 pBlock :: Parser Stmt
 pBlock = iI '{' (foldr1 Seq <$> pSome pStmt) '}' Ii <?> "Block"
-  
+
 -- |Parser for arithmetic expressions.
 pAExpr :: Parser AExpr
 pAExpr = pOper <?> "AExpr"
@@ -75,7 +75,7 @@ pAExpr = pOper <?> "AExpr"
       <|> AConst <$> pNatural
       <|> iI Neg '-' pAtom Ii
       <|> pParens pAExpr
-  
+
   pOper :: Parser AExpr
   pOper = foldr pChainl pAtom (map samePrio aOper)
   aOper :: [[(Name,AExpr -> AExpr -> AExpr)]]
@@ -90,7 +90,7 @@ pBExpr = pAtom <|> pOper <?> "BExpr"
       <|> BConst False <$ pSymbol "false"
       <|> iI Not '~' pAtom Ii
       <|> pParens pBExpr
-      
+
   pOper :: Parser BExpr
   pOper = iI (&) pAExpr (samePrio bOper) pAExpr Ii
   bOper :: [(Name,AExpr -> AExpr -> BExpr)]
@@ -120,7 +120,7 @@ pRD = iI RD "(" pName "," (pNone <|> pSome) ")" Ii
   where
   pNone = Nothing <$ pSym '?'
   pSome = Just <$> pNatural
-  
+
 -- |Parses Constant-Propagation information.
 pCP :: Parser CP
 pCP = pNone <|> (CP <$> pMapOf pSome)
@@ -133,9 +133,9 @@ pCP = pNone <|> (CP <$> pMapOf pSome)
 pZT :: Parser ZT
 pZT = pSome <|> pNone
   where
-  pSome = Z <$> pNatural
+  pSome = Z <$> pInteger
   pNone = Top <$ pSym 'T'
-  
+
 -- * Utility Functions and Parsers
 
 -- |Parses a set of value, as @{a,b,c}@.

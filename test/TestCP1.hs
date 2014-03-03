@@ -20,8 +20,8 @@ test1 = analyse mfp mfCP progCP
 test2 = analyse mop mfCP progCP
 
 main :: IO ()
-main = do testAnalysis mop mfCP progCP reslCP1
-          testAnalysis mfp mfCP progCP reslCP2
+main = do testAnalysis mop mfCP progCP reslCP
+          testAnalysis mfp mfCP progCP reslCP
 
           -- this one is kinda superfluous, since if we know that the
           -- results are reslCP1 and reslCP2, and we know that the refinement
@@ -52,20 +52,8 @@ progCP = mkProg
   ]
 
 -- |The result of a MOP CP analysis of @progCP@.
-reslCP1 :: [(Label,CP)]
-reslCP1 = cps
-  [ "{(x,2)}"
-  , "{(x,2),(y,4)}"
-  , "{(x,1),(y,4)}"
-  , "{(x,1),(y,4)}"
-  , "{(x,1),(y,4),(z,4)}"
-  , "{(x,1),(y,4),(z,16)}"
-  , "{(x,T),(y,4),(z,T)}"
-  ]
-
--- |The result of a MFP CP analysis of @progCP@.
-reslCP2 :: [(Label,CP)]
-reslCP2 = cps
+reslCP :: [(Label,CP)]
+reslCP = cps
   [ "{(x,2)}"
   , "{(x,2),(y,4)}"
   , "{(x,1),(y,4)}"
