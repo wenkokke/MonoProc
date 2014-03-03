@@ -7,7 +7,7 @@ import PROC.MF.FreeNames
 import qualified PROC.Evaluating as E (evalAE)
 
 import Data.Maybe (mapMaybe)
-import Data.Map (Map,(!))
+import Data.Map (Map)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Control.Applicative ((<$>),liftA2)
@@ -47,6 +47,11 @@ instance Show ZT where
   show (Z i) = show i
   show  Top  = "T"
 
+(!) :: Map Name ZT -> Name -> ZT
+(!) m n = case M.lookup n m of
+  Just zt -> zt
+  Nothing -> error ("eval: unbound variable '"++n++"'")
+
 fromZ :: ZT -> Integer
 fromZ (Z i) = i
 
@@ -63,23 +68,21 @@ botCP = Bottom
 refinesCP :: CP -> CP -> Bool
 refinesCP  _       Bottom = True
 refinesCP  Bottom  _      = False
-refinesCP (CP s1) (CP s2) = all (\z -> (s1 ! z) `refinesZT` (s2 ! z)) keys
+refinesCP (CP s1) (CP s2) = all (\k -> (s1 ! k) `refinesZT` (s2 ! k)) keys
   where
   keys = S.toList $ S.union (M.keysSet s1) (M.keysSet s2)
 
 -- |Refining predicate of the Z+T type.
 refinesZT :: ZT -> ZT -> Bool
-refinesZT  _      Top   = True
 refinesZT  Top    _     = True
-refinesZT (Z z1) (Z z2) = z1 == z2
+refinesZT  _      Top   = False
+refinesZT (Z z1) (Z z2) = True -- z1 == z2
 
 -- |Least upper bound of the CP type.
 joinCP :: CP -> CP -> CP
 joinCP  s1      Bottom = s1
 joinCP  Bottom  s2     = s2
-joinCP (CP s1) (CP s2) = CP $ S.fold (\x -> M.insert x $ (s1 ! x) `joinZT` (s2 ! x)) M.empty keys
-  where
-  keys = S.union (M.keysSet s1) (M.keysSet s2)
+joinCP (CP s1) (CP s2) = CP (M.unionWith joinZT s1 s2)
 
 -- |Least upper bound of Z+T.
 joinZT :: ZT -> ZT -> ZT
@@ -91,7 +94,7 @@ joinZT (Z z1) (Z z2) | z1 == z2 = Z z1
 -- |Transfer function for CP
 transferCP :: Transfer CP
 transferCP s m = case s of
-  (Assign l x a) -> case m of
+  (Assign _ x a) -> case m of
                       Bottom -> Bottom
                       CP m   -> CP (M.insert x (evalAE m a) m)
   (Skip _)       -> m
@@ -103,7 +106,7 @@ evalAE :: Map Name ZT -> AExpr -> ZT
 evalAE m a
   | anyTop    = Top
   | otherwise = case E.evalAE (fromZ <$> m) a of
-    Left  _   -> Top
+    Left  msg -> error msg
     Right zt  -> Z zt
   where
     anyTop = any isTop (map (m !) fv)

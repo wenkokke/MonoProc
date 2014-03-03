@@ -12,6 +12,7 @@ import Data.Maybe (listToMaybe)
 import qualified Data.List as L
 import qualified Data.Set as S
 
+import Debug.Trace (trace)
 import Text.Printf (printf)
 
 -- * Maximal Fixed-Point (MFP) Analysis
@@ -19,22 +20,22 @@ import Text.Printf (printf)
 -- |Performs pointwise maximal fixed-point analysis (as @mfp'@), using call
 --  stacks as a context and @maxBound@ as a limit for the call stack size.
 --  After the analysis it performs a join over all the results at a label.
-mfp :: Algorithm a a
+mfp :: (Show a) => Algorithm a a
 mfp mf l = joinall' (getL mf) (mfp' mf l)
 
 -- |See @mfp@. Takes a value @k@ as the call stack limit.
-mfpk :: Int -> Algorithm a a
+mfpk :: (Show a) => Int -> Algorithm a a
 mfpk k mf l = joinall' (getL mf) (mfpk' k mf l)
 
 -- * Embelished Maximal Fixed-Point (EMFP) Analysis.
 
 -- |See @mfp@. Returns the pointwise analysis instead of joining all results.
-mfp' :: Algorithm a (Context CallStack a)
+mfp' :: (Show a) => Algorithm a (Context CallStack a)
 mfp' mf l = mfpk' maxBound mf l
 
 -- |See @mfp@. Takes a value @k@ as the call stack limit, and returns the
 --  pointwise analysis instead of joining all results.
-mfpk' :: Int -> Algorithm a (Context CallStack a)
+mfpk' :: (Show a) => Int -> Algorithm a (Context CallStack a)
 mfpk' k mf | isForwards  mf = mfpO mf
            | isBackwards mf = mfpI mf
   where
@@ -45,7 +46,7 @@ mfpk' k mf | isForwards  mf = mfpO mf
 type WorkList = [Flow]
 
 -- |Compute the maximal fixed point for an MF.
-fixMFP :: Int -> MF a -> WorkList -> Analysis (Context CallStack a) -> Analysis (Context CallStack a)
+fixMFP :: (Show a) => Int -> MF a -> WorkList -> Analysis (Context CallStack a) -> Analysis (Context CallStack a)
 fixMFP 0 _  _      _   = error "mfpk: k should be (>=0)"
 fixMFP k mf [    ] mfp = mfp
 fixMFP k mf (w:ws) mfp = let
@@ -69,8 +70,8 @@ fixMFP k mf (w:ws) mfp = let
       ws'    = filter (`flowsFrom` b) (mkWorkList mf) ++ ws
 
       in if mfpA <: mfpB
-            then fixMFP k mf ws' mfp'
-            else fixMFP k mf ws  mfp
+         then fixMFP k mf ws' mfp'
+         else fixMFP k mf ws  mfp
 
     -- interprocedural analysis:
     Inter a b -> let
