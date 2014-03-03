@@ -7,11 +7,11 @@ import PROC.Parsing (pAExprSet)
 
 import Data.Set (Set)
 import Text.ParserCombinators.UU.Utils (runParser)
-  
+
 main :: IO ()
 main = do testAnalysis mfp mfAE progAE reslAE
           testAnalysis (mopk 3) mfAE progAE reslAE
-    
+
 progAE :: Prog
 progAE = mkProg
   [ "x = a + b;"

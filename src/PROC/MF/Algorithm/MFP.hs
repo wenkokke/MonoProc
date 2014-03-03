@@ -164,7 +164,7 @@ procEntry mf args mfpC = foldr (<$>) mfpC (unassign_return : assign_args)
   assign_args = map (getT mf . uncurry assign) args
   unassign_return = getT mf $ assign "return" ANull
 
-  
+
 -- * Contexts
 
 -- |A Context object contains a number of analyses for different
