@@ -1,11 +1,11 @@
 name          : MonoProc
 version       : 0.1.0.0
 synopsis      : Live variable analysis of the a simple procedural programming language.
-homepage      : https://github.com/pepijnkokke/MonoProc
+homepage      : https://github.com/wenkokke/MonoProc
 license       : MIT
-author        : Pepijn Kokke
-maintainer    : pepijn.kokke@gmail.com
-copyright     : (c) 2013 Pepijn Kokke
+author        : Wen Kokke
+maintainer    : wen.kokke@gmail.com
+copyright     : (c) 2013 Wen Kokke
 category      : Language
 build-type    : Simple
 cabal-version : >= 1.8
